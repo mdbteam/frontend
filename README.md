@@ -67,3 +67,6 @@ export default tseslint.config([
   },
 ])
 ```
+
+# frontend
+para desarrollar el front
