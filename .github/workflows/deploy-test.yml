@@ -23,5 +23,7 @@ jobs:
       - name: Deploy to Vercel TEST
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_TEST_PROJECT_ID }}
         run: |
-          vercel --yes --prod --token $VERCEL_TOKEN --project ${{ secrets.VERCEL_TEST_PROJECT_ID }}
+          vercel --yes --prod --token $VERCEL_TOKEN
