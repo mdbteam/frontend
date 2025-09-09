@@ -4,7 +4,7 @@ on:
   pull_request:
     types: [closed]
     branches:
-      - main         
+      - main 
 
 jobs:
   deploy-prod:
@@ -12,7 +12,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
@@ -25,6 +26,6 @@ jobs:
       - name: Deploy to Vercel PROD
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROD_PROJECT_ID }}
         run: |
-          vercel --confirm --prod --token $VERCEL_TOKEN
+          vercel --yes --prod
+
