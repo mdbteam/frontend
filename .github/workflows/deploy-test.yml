@@ -3,24 +3,32 @@ name: Deploy TEST to Vercel
 on:
   push:
     branches:
-      - develop  
+      - develop  # Se dispara en pushes a develop
 
 jobs:
   deploy-test:
     runs-on: ubuntu-latest
 
     steps:
+      # 1️⃣ Clonar el repositorio
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # 2️⃣ Configurar Node.js
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 20
 
+      # 3️⃣ Instalar Vercel CLI
       - name: Install Vercel CLI
         run: npm install -g vercel
 
+      # 4️⃣ Verificar token (debug)
+      - name: Test Vercel Token
+        run: vercel --token ${{ secrets.VERCEL_TOKEN }} whoami
+
+      # 5️⃣ Deploy a TEST
       - name: Deploy to Vercel TEST
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
