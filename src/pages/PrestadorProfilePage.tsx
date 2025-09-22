@@ -1,4 +1,3 @@
-import React from 'react';
 import ProfileHeader from '../components/profile/ProfileHeader';
 import ServiceCard from '../components/profile/ServiceCard';
 import ReviewCard from '../components/profile/ReviewCard';
