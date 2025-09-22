@@ -1,12 +1,9 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React from 'react';
+import PrestadorProfilePage from './pages/PrestadorProfilePage';
 
-function App() {
-  const [count, setCount] = useState(0)
-
+function App() { 
   return (
+<<<<<<< HEAD
     <>
       <div>
         <a href="https://vite.dev" target="_blank">
@@ -33,6 +30,10 @@ function App() {
       </p>
     </>
   )
+=======
+    <PrestadorProfilePage />
+  );
+>>>>>>> 44b0dca (primera impresión de front)
 }
 
-export default App
+export default App;
