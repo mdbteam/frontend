@@ -1,15 +1,12 @@
-name: Deploy MAIN to Vercel
+name: Deploy TEST to Vercel
 
 on:
-  pull_request:
+  push:
     branches:
-      - main
-    types:
-      - closed
+      - develop
 
 jobs:
-  deploy-main:
-    if: github.event.pull_request.merged == true
+  deploy-test:
     runs-on: ubuntu-latest
 
     steps:
@@ -23,10 +20,10 @@ jobs:
       - name: Install Vercel CLI
         run: npm install -g vercel
 
-      - name: Deploy to Vercel MAIN
+      - name: Deploy to Vercel TEST
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROD_PROJECT_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_TEST_PROJECT_ID }}
         run: |
           vercel --yes --prod --token $VERCEL_TOKEN
