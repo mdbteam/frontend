@@ -13,7 +13,7 @@ function PortfolioItem({ imageUrl, title, description }: PortfolioItemProps) {
       <img 
         src={imageUrl} 
         alt={title} 
-        className="h-60 w-full object-cover transition-transform duration-300 group-hover:scale-110" 
+        className="h-60 w-full object-cover transition-transform duration-350 group-hover:scale-110" 
       />
       {/* Un overlay oscuro que aparece al pasar el mouse */}
       <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
