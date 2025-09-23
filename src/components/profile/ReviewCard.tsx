@@ -1,6 +1,5 @@
 // src/components/profile/ReviewCard.tsx
 
-import React from 'react';
 
 // Props que necesita la tarjeta de reseña
 interface ReviewCardProps {

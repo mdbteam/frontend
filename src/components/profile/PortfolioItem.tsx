@@ -1,6 +1,4 @@
 // src/components/profile/PortfolioItem.tsx
-import React from 'react';
-
 interface PortfolioItemProps {
   imageUrl: string;
   title: string;

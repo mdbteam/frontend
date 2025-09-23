@@ -1,6 +1,5 @@
 // src/pages/PrestadorListPage.tsx
 
-import React from 'react';
 import PrestadorCard from '../components/prestadores/PrestadorCard';
 import { mockPrestadores } from '../data/mockData';
 

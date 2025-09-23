@@ -1,7 +1,6 @@
 // src/components/profile/ProfileHeader.tsx
 
 import { Button, Card } from 'flowbite-react';
-import React from 'react';
 
 interface ProfileHeaderProps {
   readonly nombre: string;

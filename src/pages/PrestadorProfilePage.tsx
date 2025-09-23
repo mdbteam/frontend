@@ -1,6 +1,5 @@
 // src/pages/PrestadorProfilePage.tsx
 
-import React from 'react';
 import { useParams } from 'react-router-dom'; // <-- Hook para leer parámetros de la URL
 import { mockPrestadores } from '../data/mockData'; // <-- Importamos todos los prestadores
 
