@@ -3,7 +3,6 @@
 import { Button, Textarea, Label } from 'flowbite-react';
 import React from 'react';
 
-// SOLUCIÓN: Aplicamos el mismo patrón 'as any' para evitar los errores de tipo de la librería.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const AnyLabel = Label as any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -1,4 +1,3 @@
-// src/components/home/FeaturedCategories.tsx
 import React from 'react';
 
 const categories = [
@@ -19,7 +18,6 @@ export function FeaturedCategories() {
         </h2>
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
           {categories.map((category) => (
-            // CAMBIO: Reemplazamos "#" con una ruta de búsqueda real
             <a
               key={category.name}
               href={`/prestadores?categoria=${category.slug}`}

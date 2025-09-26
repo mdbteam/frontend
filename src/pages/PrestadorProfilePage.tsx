@@ -1,11 +1,7 @@
-// src/pages/PrestadorProfilePage.tsx
-
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { mockPrestadores } from '../data/mockData';
 import { Button } from 'flowbite-react';
-
-// SOLUCIÓN: Importamos los componentes sin llaves, ya que usan 'export default'.
 import ProfileHeader from '../components/profile/ProfileHeader';
 import {ServiceCard} from '../components/profile/ServiceCard';
 import ReviewCard from '../components/profile/ReviewCard';

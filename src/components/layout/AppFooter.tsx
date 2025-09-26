@@ -1,7 +1,6 @@
-// src/components/layout/AppFooter.tsx
 
 import React from 'react';
-import { Link } from 'react-router-dom'; // Usamos Link para la navegación interna
+import { Link } from 'react-router-dom'; 
 
 export function AppFooter() {
   const currentYear = new Date().getFullYear();
@@ -9,12 +8,11 @@ export function AppFooter() {
   return (
     <footer className="bg-white border-t border-slate-200 shadow-sm">
       <div className="w-full max-w-7xl mx-auto p-4 md:py-6 md:flex md:items-center md:justify-between">
-        {/* Copyright */}
+
         <span className="text-sm text-gray-500 sm:text-center">
           © {currentYear} <Link to="/" className="hover:underline">Chambee™</Link>. Todos los derechos reservados.
         </span>
 
-        {/* Grupo de Enlaces */}
         <ul className="flex flex-wrap items-center mt-3 text-sm font-medium text-gray-500 sm:mt-0">
           <li>
             <Link to="/nosotros" className="hover:underline me-4 md:me-6">

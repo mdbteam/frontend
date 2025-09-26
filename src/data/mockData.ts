@@ -1,6 +1,4 @@
-// src/data/mockData.ts
 
-// 1. Importamos las imágenes locales desde la carpeta 'assets'
 import fotoJuan from '../assets/perfil1.webp';
 import fotoAna from '../assets/perfil2.jpeg';
 import fotoCarlos from '../assets/perfil3.jpg';
@@ -9,7 +7,7 @@ export const mockPrestadores = [
   {
     id: '1',
     nombre: 'Juan Pérez',
-    fotoUrl: fotoJuan, // 2. Usamos la variable importada en lugar de la URL
+    fotoUrl: fotoJuan, 
     oficio: 'Gasfitería Profesional',
     resumen: 'Instalaciones y reparaciones de gasfitería. Trabajos garantizados.',
     puntuacion: 4.8,
@@ -25,12 +23,12 @@ export const mockPrestadores = [
     ],
     totalReseñas: 82,
     estaVerificado: true,
-    ratingDistribution: [85, 10, 3, 2, 0], // [Porcentaje 5*, 4*, 3*, 2*, 1*]
+    ratingDistribution: [85, 10, 3, 2, 0],
   },
   {
     id: '2',
     nombre: 'Ana Gómez',
-    fotoUrl: fotoAna, // 2. Usamos la variable importada
+    fotoUrl: fotoAna, 
     oficio: 'Electricista Certificada',
     resumen: 'Certificación SEC. Instalaciones eléctricas, reparaciones y mantenciones.',
     puntuacion: 5.0,
@@ -50,7 +48,7 @@ export const mockPrestadores = [
   {
     id: '3',
     nombre: 'Carlos Soto',
-    fotoUrl: fotoCarlos, // 2. Usamos la variable importada
+    fotoUrl: fotoCarlos,
     oficio: 'Carpintería y Mueblería',
     resumen: 'Diseño y fabricación de muebles a medida. Restauración y trabajos finos.',
     puntuacion: 4.5,
@@ -69,7 +67,7 @@ export const mockPrestadores = [
   {
     id: '1',
     nombre: 'Juan Pérez',
-    fotoUrl: fotoJuan, // 2. Usamos la variable importada en lugar de la URL
+    fotoUrl: fotoJuan, 
     oficio: 'Gasfitería Profesional',
     resumen: 'Instalaciones y reparaciones de gasfitería. Trabajos garantizados.',
     puntuacion: 4.8,
@@ -85,12 +83,12 @@ export const mockPrestadores = [
     ],
     totalReseñas: 82,
     estaVerificado: true,
-    ratingDistribution: [85, 10, 3, 2, 0], // [Porcentaje 5*, 4*, 3*, 2*, 1*]
+    ratingDistribution: [85, 10, 3, 2, 0], 
   },
   {
     id: '2',
     nombre: 'Ana Gómez',
-    fotoUrl: fotoAna, // 2. Usamos la variable importada
+    fotoUrl: fotoAna, 
     oficio: 'Electricista Certificada',
     resumen: 'Certificación SEC. Instalaciones eléctricas, reparaciones y mantenciones.',
     puntuacion: 5.0,
@@ -110,7 +108,7 @@ export const mockPrestadores = [
   {
     id: '3',
     nombre: 'Carlos Soto',
-    fotoUrl: fotoCarlos, // 2. Usamos la variable importada
+    fotoUrl: fotoCarlos, 
     oficio: 'Carpintería y Mueblería',
     resumen: 'Diseño y fabricación de muebles a medida. Restauración y trabajos finos.',
     puntuacion: 4.5,

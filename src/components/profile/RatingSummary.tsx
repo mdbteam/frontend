@@ -1,11 +1,11 @@
-// src/components/profile/RatingSummary.tsx
+
 import { Rating, RatingAdvanced, RatingStar } from "flowbite-react";
 import React from 'react';
 
 interface RatingSummaryProps {
   readonly averageRating: number;
   readonly totalReviews: number;
-  // Un array con los porcentajes para cada estrella, de 5 a 1. E.g., [70, 17, 8, 4, 1]
+
   readonly ratingDistribution: number[]; 
 }
 
