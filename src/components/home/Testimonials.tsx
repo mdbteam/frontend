@@ -1,5 +1,3 @@
-import React from 'react';
-
 const testimonials = [
     {
         quote: "¡Servicio increíble! Encontré un gasfíter en minutos y el trabajo fue impecable. Totalmente recomendado.",

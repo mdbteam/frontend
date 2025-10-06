@@ -1,6 +1,4 @@
 // src/components/layout/AppLayout.tsx
-import React from 'react';
-import type { ReactNode } from 'react';
 
 import { AppNavbar } from './Navbar';
 import { AppFooter } from './AppFooter';

@@ -1,7 +1,6 @@
 // src/components/profile/RatingSummary.tsx
 
 import { Rating, RatingAdvanced, RatingStar } from "flowbite-react";
-import React from 'react';
 
 interface RatingSummaryProps {
   readonly averageRating: number;

@@ -1,6 +1,5 @@
 
 import { Badge, Button } from 'flowbite-react';
-import React from 'react';
 
 interface ProfileHeaderProps {
   readonly nombre: string;
