@@ -1,4 +1,3 @@
-import React from 'react';
 import { FileUpload } from '../components/form/FileUpload';
 
 function FormField({ label, type, placeholder, id }: { readonly label: string, readonly type: string, readonly placeholder: string, readonly id: string }) {
