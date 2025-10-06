@@ -1,5 +1,3 @@
-// src/components/profile/CommentForm.tsx
-
 import { Button, Textarea, Label } from 'flowbite-react';
 import React from 'react';
 
@@ -15,10 +13,8 @@ export function CommentForm() {
       <form className="flex flex-col gap-4">
         <div>
           <div className="mb-2 block">
-            {/* Usamos el componente 'AnyLabel' */}
             <AnyLabel htmlFor="comment" value="Tu comentario" />
           </div>
-          {/* Usamos el componente 'AnyTextarea' */}
           <AnyTextarea id="comment" placeholder="Describe tu experiencia..." required rows={4} />
         </div>
         <Button type="submit">Enviar Reseña</Button>

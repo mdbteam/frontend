@@ -1,4 +1,3 @@
-// src/components/profile/PortfolioItem.tsx
 
 interface PortfolioItemProps {
   readonly imageUrl: string;
