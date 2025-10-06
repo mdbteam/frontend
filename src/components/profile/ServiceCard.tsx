@@ -1,19 +1,23 @@
 
+import { Button } from 'flowbite-react';
+import React from 'react';
 
 interface ServiceCardProps {
-  nombre: string;
-  precio: string;
+  readonly nombre: string;
+  readonly precioEstimado: string; 
 }
 
-function ServiceCard({ nombre, precio }: ServiceCardProps) {
+export function ServiceCard({ nombre, precioEstimado }: ServiceCardProps) {
   return (
-    // 'flex justify-between' pone el nombre a la izquierda y el precio a la derecha.
-    // 'hover:bg-gray-50' le da un sutil efecto al pasar el mouse por encima.
-    <li className="flex justify-between items-center p-4 hover:bg-gray-50 rounded-md transition-colors">
-      <p className="text-gray-800">{nombre}</p>
-      <span className="font-semibold text-gray-700">{precio}</span>
-    </li>
+    <div className="flex items-center justify-between rounded-lg border border-slate-200 p-4 transition-colors hover:bg-slate-50">
+      <div>
+        <h3 className="font-semibold text-gray-800">{nombre}</h3>
+        <p className="text-sm text-gray-500">Precio estimado: {precioEstimado}</p>
+      </div>
+      <Button size="sm" color="info">
+        Solicitar
+      </Button>
+    </div>
   );
 }
 
-export default ServiceCard;

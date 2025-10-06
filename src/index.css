@@ -6,3 +6,7 @@ body {
   background-color: #f3f4f6; /* Tailwind bg-gray-100 */
   color: #111827; /* Tailwind text-gray-900 */
 }
+
+.clip-hexagon {
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+}
