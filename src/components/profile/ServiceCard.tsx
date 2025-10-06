@@ -1,6 +1,5 @@
 
 import { Button } from 'flowbite-react';
-import React from 'react';
 
 interface ServiceCardProps {
   readonly nombre: string;
