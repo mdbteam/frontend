@@ -1,4 +1,3 @@
-import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { mockPrestadores } from '../data/mockData';
 import { Button } from 'flowbite-react';

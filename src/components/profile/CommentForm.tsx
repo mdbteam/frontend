@@ -1,5 +1,4 @@
 import { Button, Textarea, Label } from 'flowbite-react';
-import React from 'react';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const AnyLabel = Label as any;

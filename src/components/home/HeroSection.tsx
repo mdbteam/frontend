@@ -1,4 +1,3 @@
-import React from 'react';
 const HexGridBackground = () => (
   <div className="absolute inset-0 w-full h-full opacity-20" style={{
     backgroundImage: 'linear-gradient(rgba(15, 23, 42, 0) 1px, #0f172a 1px), linear-gradient(90deg, rgba(15, 23, 42, 0) 1px, #0f172a 1px)',
