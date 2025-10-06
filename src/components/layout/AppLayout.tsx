@@ -1,5 +1,5 @@
 // src/components/layout/AppLayout.tsx
-
+import { ReactNode } from 'react';
 import { AppNavbar } from './Navbar';
 import { AppFooter } from './AppFooter';
 
