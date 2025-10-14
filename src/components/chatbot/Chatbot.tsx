@@ -1,7 +1,5 @@
-// src/components/chatbot/Chatbot.tsx
-// No es necesario importar React gracias al nuevo JSX Transform.
+
 import { useState, useEffect } from 'react';
-// Usamos un ícono de una biblioteca profesional para mayor claridad.
 import { FaForumbee } from "react-icons/fa";
 
 interface Message {
@@ -62,7 +60,7 @@ export function Chatbot() {
     <div className="fixed bottom-4 right-4 w-96">
       <div className="bg-slate-800/80 backdrop-blur-md rounded-lg shadow-xl border border-slate-700 flex flex-col h-[500px]">
         <div className="p-3 border-b border-slate-700 flex justify-between items-center">
-          <h3 className="text-lg font-bold text-white font-poppins">Asistente Chambee</h3>
+          <h3 className="text-lg font-bold text-white font-poppins">Concerje Chambee</h3>
           <button onClick={handleClose} className="text-slate-400 hover:text-white text-2xl font-bold">&times;</button>
         </div>
 

@@ -1,8 +1,22 @@
 import { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../../store/authStore';
 
 export function AppNavbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const user = useAuthStore((state) => state.user);
+  const logout = useAuthStore((state) => state.logout);
+
+  const handleLogout = () => {
+    logout();
+    setIsOpen(false);
+    navigate('/');
+  };
+
+  const isAdmin = user?.rol === 'admin'; 
 
   const getNavLinkClass = ({ isActive }: { isActive: boolean }) =>
     isActive ? 'text-cyan-400 font-semibold' : 'text-slate-300 hover:text-cyan-400';
@@ -22,7 +36,7 @@ export function AppNavbar() {
             </NavLink>
           </div>
 
-          {/* --- Menú de Escritorio --- */}
+          {/* --- Menú de Escritorio (Enlaces) --- */}
           <div className="hidden md:block">
             <div className="ml-10 flex items-center space-x-6">
               <NavLink to="/" className={getNavLinkClass}>
@@ -31,23 +45,57 @@ export function AppNavbar() {
               <NavLink to="/prestadores" className={getNavLinkClass}>
                 Buscar Agentes
               </NavLink>
-              <NavLink to="/postular" className={getNavLinkClass}>
-                Postular
-              </NavLink>
-              <NavLink to="/administrador" className={getNavLinkClass}>
-                Admin
-              </NavLink>
+              
+              {isAuthenticated && (
+                <>
+                  <NavLink to="/calendario" className={getNavLinkClass}>
+                    Agenda
+                  </NavLink>
+                  <NavLink to="/postular" className={getNavLinkClass}>
+                    Postular
+                  </NavLink>
+                </>
+              )}
+              {isAdmin && (
+                <NavLink to="/administrador" className={getNavLinkClass}>
+                  Admin
+                </NavLink>
+              )}
             </div>
           </div>
 
-          {/* --- Botón de Registro (Escritorio) --- */}
+          {/* --- Botones de Registro/Usuario (Escritorio) --- */}
           <div className="hidden md:block">
-            <NavLink 
-              to="/registro" 
-              className="bg-cyan-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-cyan-400 transition-colors"
-            >
-              Regístrate
-            </NavLink>
+            {isAuthenticated ? (
+              <div className="flex items-center gap-4">
+                <span className="text-sm font-medium text-slate-300">
+                  Hola, {user?.nombres.split(' ')[0]}
+                </span>
+                <button
+                  onClick={handleLogout}
+                  className="bg-slate-700 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-slate-600 transition-colors"
+                >
+                  Cerrar Sesión
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-4">
+                {/* --- CAMBIO DE UX APLICADO AQUÍ --- */}
+                <NavLink
+                  to="/registro" 
+                  className="text-cyan-400 border border-cyan-500 px-4 py-2 rounded-md text-sm font-medium hover:bg-cyan-500/10 transition-colors"
+                >
+                  Regístrate
+                </NavLink>
+                <NavLink 
+                  to="/login"
+                  className="bg-cyan-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-cyan-400 transition-colors"
+                >
+                  Iniciar Sesión
+                </NavLink>
+                {/* ---------------------------------- */}
+              </div>
+            )}
           </div>
 
           {/* --- Botón de Menú Hamburguesa --- */}
@@ -84,27 +132,55 @@ export function AppNavbar() {
             <NavLink to="/prestadores" className={getMobileNavLinkClass}>
               Buscar Agentes
             </NavLink>
-            {/* --- NUEVO ENLACE AÑADIDO AQUÍ --- */}
-            <NavLink to="/calendario" className={getMobileNavLinkClass}>
-              Agenda
-            </NavLink>
-            {/* ---------------------------------- */}
-            <NavLink to="/postular" className={getMobileNavLinkClass}>
-              Postular
-            </NavLink>
-            <NavLink to="/administrador" className={getMobileNavLinkClass}>
-              Admin
-            </NavLink>
+            {isAuthenticated && (
+              <>
+                <NavLink to="/calendario" className={getMobileNavLinkClass}>
+                  Agenda
+                </NavLink>
+                <NavLink to="/postular" className={getMobileNavLinkClass}>
+                  Postular
+                </NavLink>
+              </>
+            )}
+            {isAdmin && (
+              <NavLink to="/administrador" className={getMobileNavLinkClass}>
+                Admin
+              </NavLink>
+            )}
           </div>
           <div className="pt-4 pb-3 border-t border-slate-700">
-            <div className="px-2">
-              <NavLink 
-                to="/registro" 
-                className="w-full text-center bg-cyan-500 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-cyan-400 block"
-              >
-                Regístrate
-              </NavLink>
-            </div>
+            {isAuthenticated ? (
+              <div className="px-2 space-y-2">
+                <div className="px-3">
+                  <div className="text-base font-medium text-white">{user?.nombres}</div>
+                  <div className="text-sm font-medium text-slate-400">{user?.rol}</div>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="w-full text-left bg-rose-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-rose-500 block"
+                >
+                  Cerrar Sesión
+                </button>
+              </div>
+            ) : (
+              // --- CAMBIO DE UX APLICADO AQUÍ (MÓVIL) ---
+              // Iniciar Sesión (primario) va primero
+              <div className="px-2 space-y-2">
+                <NavLink 
+                  to="/login" 
+                  className="w-full text-center bg-cyan-500 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-cyan-400 block"
+                >
+                  Iniciar Sesión
+                </NavLink>
+                <NavLink 
+                  to="/registro" 
+                  className="w-full text-center text-cyan-400 border border-cyan-500 px-3 py-2 rounded-md text-sm font-medium hover:bg-cyan-500/10 block"
+                >
+                  Regístrate
+                </NavLink>
+              </div>
+              // ------------------------------------------
+            )}
           </div>
         </div>
       )}
