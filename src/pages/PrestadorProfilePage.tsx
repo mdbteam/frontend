@@ -1,42 +1,61 @@
 // src/pages/PrestadorProfilePage.tsx
+import { useParams, Link } from 'react-router-dom';
+import { mockPrestadores } from '../data/mockData';
+import { ProfileHeader } from '../components/profile/ProfileHeader';
+import { ServiceCard } from '../components/profile/ServiceCard';
+import { ReviewCard } from '../components/profile/ReviewCard';
+import { RatingSummary } from '../components/profile/RatingSummary';
+import { CommentForm } from '../components/profile/CommentForm';
 
-import { useParams } from 'react-router-dom'; // <-- Hook para leer parámetros de la URL
-import { mockPrestadores } from '../data/mockData'; // <-- Importamos todos los prestadores
 
-// Importamos los componentes que ya tenías
-import ProfileHeader from '../components/profile/ProfileHeader';
-// ... (importa ServiceCard, ReviewCard, etc. si los vas a usar)
+function ProfileSection({ title, children }: { readonly title: string; readonly children: React.ReactNode }) {
+    return (
+        <section className="rounded-lg bg-slate-800/50 border border-slate-700 p-6 backdrop-blur-sm">
+            <h2 className="mb-4 text-2xl font-bold text-yellow-400 font-poppins">{title}</h2>
+            <div className="space-y-4">{children}</div>
+        </section>
+    );
+}
 
 function PrestadorProfilePage() {
-  // Leemos el parámetro "prestadorId" de la URL
-  const { prestadorId } = useParams();
+    const { prestadorId } = useParams<{ prestadorId: string }>();
+    const prestador = mockPrestadores.find(p => p.id === prestadorId);
 
-  // Buscamos el prestador correspondiente en nuestros datos de prueba
-  const prestador = mockPrestadores.find(p => p.id === prestadorId);
+    if (!prestador) {
+        return (
+            <div className="flex flex-col items-center justify-center p-8 text-center">
+                <h1 className="text-2xl font-bold text-red-500">Prestador no encontrado</h1>
+                <p className="mt-2 text-slate-400">No pudimos encontrar el perfil que buscas.</p>
+                <Link to="/" className="mt-6 inline-block bg-cyan-500 text-white px-6 py-2 rounded-md font-medium hover:bg-cyan-400">
+                    Volver al Inicio
+                </Link>
+            </div>
+        );
+    }
 
-  // Manejo por si no se encuentra el prestador
-  if (!prestador) {
-    return <div className="p-8 text-center text-red-500">Prestador no encontrado.</div>;
-  }
+    return (
+        <div className="p-4 sm:p-8">
+            <div className="mx-auto max-w-4xl space-y-8">
+                <ProfileHeader {...prestador} />
 
-  // Si se encuentra, renderizamos el perfil con sus datos
-  return (
-    <div className="bg-slate-50 min-h-screen p-4 sm:p-8">
-      <div className="max-w-4xl mx-auto space-y-8">
-        <ProfileHeader
-          nombre={prestador.nombre}
-          oficio={prestador.oficio}
-          fotoUrl={prestador.fotoUrl}
-          descripcion={prestador.descripcion}
-          estaVerificado={true} // Asumiendo que todos están verificados por ahora
-        />
+                <ProfileSection title="Servicios Ofrecidos">
+                    {prestador.servicios.map(servicio => <ServiceCard key={servicio.id} {...servicio} />)}
+                </ProfileSection>
 
-        {/* Aquí puedes agregar las otras secciones como Servicios y Reseñas,
-            usando los datos de `prestador.servicios` y `prestador.reseñas` */}
+                <RatingSummary
+                    averageRating={prestador.puntuacion}
+                    totalReviews={prestador.totalReseñas}
+                    ratingDistribution={prestador.ratingDistribution}
+                />
+                
+                <CommentForm />
 
-      </div>
-    </div>
-  );
+                <ProfileSection title="Comentarios de otros clientes">
+                    {prestador.reseñas.map(reseña => <ReviewCard key={reseña.id} {...reseña} />)}
+                </ProfileSection>
+            </div>
+        </div>
+    );
 }
 
 export default PrestadorProfilePage;
