@@ -1,4 +1,3 @@
-// src/pages/PrestadorProfilePage.tsx
 import { useParams, Link } from 'react-router-dom';
 import { mockPrestadores } from '../data/mockData';
 import { ProfileHeader } from '../components/profile/ProfileHeader';
@@ -6,7 +5,6 @@ import { ServiceCard } from '../components/profile/ServiceCard';
 import { ReviewCard } from '../components/profile/ReviewCard';
 import { RatingSummary } from '../components/profile/RatingSummary';
 import { CommentForm } from '../components/profile/CommentForm';
-
 
 function ProfileSection({ title, children }: { readonly title: string; readonly children: React.ReactNode }) {
     return (
@@ -39,7 +37,14 @@ function PrestadorProfilePage() {
                 <ProfileHeader {...prestador} />
 
                 <ProfileSection title="Servicios Ofrecidos">
-                    {prestador.servicios.map(servicio => <ServiceCard key={servicio.id} {...servicio} />)}
+                    {prestador.servicios.map(servicio => (
+                        <ServiceCard 
+                            key={servicio.id} 
+                            nombre={servicio.nombre} 
+                            precioEstimado={servicio.precioEstimado} 
+                        />
+                    ))}
+                    {/* ------------------------------------ */}
                 </ProfileSection>
 
                 <RatingSummary
