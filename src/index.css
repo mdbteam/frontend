@@ -1,14 +1,57 @@
-
+/* src/index.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* --- Estilos Globales --- */
 body {
-  background-color: #f3f4f6; /* Tailwind bg-gray-100 */
-  color: #111827; /* Tailwind text-gray-900 */
+  background-color: #f3f4f6; /* bg-gray-100 */
+  color: #1f2937; /* text-gray-800 */
 }
 
-
+/* --- Clases Personalizadas --- */
 .clip-chamfer {
   clip-path: polygon(0% 15%, 15% 0%, 85% 0%, 100% 15%, 100% 85%, 85% 100%, 15% 100%, 0% 85%);
+}
+
+/* --- Estilos para FullCalendar (TEMA CLARO) --- */
+.fc {
+  /* No se necesitan estilos base aquí */
+}
+.fc .fc-toolbar-title {
+  color: #374151; /* text-gray-700 */
+  font-family: 'Poppins', sans-serif;
+}
+.fc .fc-button {
+  background-color: #f9fafb !important; /* bg-gray-50 */
+  border: 1px solid #d1d5db !important; /* border-gray-300 */
+  color: #374151 !important; /* text-gray-700 */
+  box-shadow: none !important;
+  text-transform: capitalize !important;
+}
+.fc .fc-button-primary:hover {
+  background-color: #f3f4f6 !important; /* bg-gray-100 */
+}
+.fc .fc-button-primary:focus {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px #a5f3fc; /* ring-2 ring-cyan-200 */
+}
+.fc .fc-daygrid-day-header {
+  color: #6b7280; /* text-gray-500 */
+  border: none !important;
+}
+.fc .fc-daygrid-day {
+  border-color: #e5e7eb !important; /* border-gray-200 */
+}
+.fc .fc-day-today {
+  background-color: #ecfeff !important; /* bg-cyan-50 */
+}
+.fc .fc-daygrid-day-number {
+  color: #1f2937; /* text-gray-800 */
+}
+.fc .fc-event {
+  background-color: #0891b2 !important; /* bg-cyan-600 */
+  border-color: #0e7490 !important; /* border-cyan-700 */
+  cursor: pointer;
 }

@@ -1,20 +1,18 @@
-// src/components/layout/AppLayout.tsx
-import React from 'react';
-import type { ReactNode } from 'react';
-
-import { AppNavbar } from './Navbar';
+import { Outlet } from 'react-router-dom';
+import { AppNavbar } from './Navbar'; 
 import { AppFooter } from './AppFooter';
+import  {Chatbot}  from '../chatbot/Chatbot';
 
-interface AppLayoutProps {
-    readonly children: ReactNode;
-}
-
-export function AppLayout({ children }: AppLayoutProps) {
-    return (
-        <div className="flex min-h-screen flex-col bg-slate-100">
-            <AppNavbar />
-            <main className="flex-grow">{children}</main>
-            <AppFooter />
-        </div>
-    );
+export function AppLayout() {
+  return (
+    <div className="flex min-h-screen flex-col bg-slate-900 text-slate-100">
+      <AppNavbar />
+      <main className="flex-grow">
+        <Outlet />
+      </main>
+      <AppFooter />
+      
+      <Chatbot />
+    </div>
+  );
 }

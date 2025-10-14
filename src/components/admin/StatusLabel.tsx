@@ -1,5 +1,3 @@
-import React from 'react';
-
 interface StatusLabelProps {
   status: 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Requiere Modificación';
 }

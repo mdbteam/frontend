@@ -1,5 +1,5 @@
-
-import React, { useState, useCallback } from 'react';
+// src/components/FileUpload.tsx
+import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 
 interface FileUploadProps {
@@ -20,8 +20,9 @@ export function FileUpload({ label, helpText, acceptedFileTypes }: FileUploadPro
     accept: { [acceptedFileTypes]: [] },
   });
 
-  const filePreviews = files.map((file, index) => (
-    <div key={index} className="text-xs text-slate-400 truncate">
+  // Usamos 'file.name' como key, ya que es un identificador más estable que el índice.
+  const filePreviews = files.map((file) => (
+    <div key={file.name} className="text-xs text-slate-400 truncate">
       - {file.name} ({Math.round(file.size / 1024)} KB)
     </div>
   ));

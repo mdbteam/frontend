@@ -1,40 +1,52 @@
 
-import { Rating, RatingAdvanced, RatingStar } from "flowbite-react";
-import React from 'react';
+import { FaUserCircle } from 'react-icons/fa';
 
-interface RatingSummaryProps {
-  readonly averageRating: number;
-  readonly totalReviews: number;
 
-  readonly ratingDistribution: number[]; 
+function StarRating({ rating }: { readonly rating: number }) {
+    const fullStars = Math.round(rating);
+    const emptyStars = 5 - fullStars;
+    return (
+        <div className="flex items-center">
+            {[...Array(fullStars)].map((_, i) => <span key={`full-${i}`} className="text-yellow-400">★</span>)}
+            {[...Array(emptyStars)].map((_, i) => <span key={`empty-${i}`} className="text-slate-600">★</span>)}
+        </div>
+    );
 }
 
-export function RatingSummary({ averageRating, totalReviews, ratingDistribution }: RatingSummaryProps) {
-  const fullStars = Math.round(averageRating);
+interface ReviewCardProps {
+  readonly autor: string;
+  readonly puntuacion: number;
+  readonly comentario: string;
+  readonly fotoUrl?: string;
+}
 
+export function ReviewCard({ autor, puntuacion, comentario, fotoUrl }: ReviewCardProps) {
   return (
-    <div className="rounded-lg bg-white p-6 shadow-md">
-      <h2 className="mb-4 text-2xl font-bold text-gray-800">Calificaciones de Clientes</h2>
-
-      <Rating className="mb-2">
-        {[...Array(fullStars)].map((_, i) => <RatingStar key={`full-${i}`} />)}
-        {[...Array(5 - fullStars)].map((_, i) => <RatingStar key={`empty-${i}`} filled={false} />)}
-        <p className="ml-2 text-sm font-medium text-gray-500">
-          {averageRating.toFixed(1)} de 5 estrellas
-        </p>
-      </Rating>
-
-      <p className="mb-4 text-sm font-medium text-gray-500">
-        {totalReviews} calificaciones totales
+    <div className="bg-slate-800/50 backdrop-blur-sm rounded-lg border border-slate-700 p-6 relative">
+      <div className="absolute top-4 left-5 text-6xl text-slate-700 font-serif opacity-50">
+        “
+      </div>
+      
+      <p className="relative z-10 text-slate-300 italic h-24 overflow-hidden">
+        {comentario}
       </p>
 
-      {ratingDistribution.map((percent, index) => (
-        <RatingAdvanced key={index} percentFilled={percent} className="mb-2">
-          <span className="w-12">{5 - index} estrellas</span>
-        </RatingAdvanced>
-      ))}
+      <div className="mt-4 flex items-center pt-4 border-t border-slate-700">
+       
+        {fotoUrl ? (
+          <img 
+            src={fotoUrl} 
+            alt={`Foto de ${autor}`} 
+            className="h-10 w-10 rounded-full object-cover" 
+          />
+        ) : (
+          <FaUserCircle className="h-10 w-10 text-slate-500" />
+        )}
+        <div className="ml-4">
+          <p className="font-bold text-slate-200">{autor}</p>
+          <StarRating rating={puntuacion} />
+        </div>
+      </div>
     </div>
   );
 }
-
-export default RatingSummary;

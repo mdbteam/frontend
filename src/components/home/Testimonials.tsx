@@ -1,5 +1,3 @@
-import React from 'react';
-
 const testimonials = [
     {
         quote: "¡Servicio increíble! Encontré un gasfíter en minutos y el trabajo fue impecable. Totalmente recomendado.",
@@ -24,7 +22,7 @@ const testimonials = [
     }
 ];
 
-function StarRating({ rating }: { rating: number }) {
+function StarRating({ rating }: { readonly rating: number }) {
     return (
         <div className="flex justify-center mb-4">
             {[...Array(5)].map((_, i) => (
