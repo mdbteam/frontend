@@ -36,10 +36,8 @@ const AdminDashboardPage: React.FC = () => {
   };
 
   return (
-    // SOLUCIÓN: Ajustamos el padding y el color de fondo ya es heredado.
     <div className="p-4 sm:p-8 min-h-screen">
       <header className="mb-8">
-        {/* SOLUCIÓN: Cambiamos los colores del texto para que sean visibles y consistentes. */}
         <h1 
           className="text-4xl font-bold text-white font-poppins"
           style={{ textShadow: '0 0 15px rgba(234, 179, 8, 0.4)' }}
@@ -51,17 +49,14 @@ const AdminDashboardPage: React.FC = () => {
 
       <main>
         {!selectedRequest ? (
-          // El componente RequestsTable probablemente necesite ser adaptado también.
           <RequestsTable requests={requests} onSelectRequest={handleSelectRequest} />
         ) : (
           <div>
-            {/* SOLUCIÓN: Ajustamos el color del botón "Volver". */}
             <button onClick={handleGoBack} className="mb-6 text-cyan-400 hover:text-cyan-300 font-semibold">
               &larr; Volver al Dashboard
             </button>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               
-              {/* SOLUCIÓN: Cambiamos el fondo blanco por uno oscuro y semitransparente. */}
               <div className="lg:col-span-2 bg-slate-800/50 border border-slate-700 p-6 rounded-lg space-y-8">
                 <ProfileHeader
                     nombres={selectedRequest.providerName}
@@ -73,7 +68,6 @@ const AdminDashboardPage: React.FC = () => {
                 />
 
                 <div>
-                  {/* SOLUCIÓN: Cambiamos el color del texto de la sección. */}
                   <h3 className="text-xl font-bold text-yellow-400 mb-4 border-b border-slate-700 pb-2">Servicios Ofrecidos</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {selectedRequest.profileData.services.map((service) => (
@@ -87,7 +81,6 @@ const AdminDashboardPage: React.FC = () => {
                 </div>
                 
                 <div>
-                  {/* SOLUCIÓN: Cambiamos el color del texto de la sección. */}
                   <h3 className="text-xl font-bold text-yellow-400 mb-4 border-b border-slate-700 pb-2">Portafolio</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {selectedRequest.profileData.portfolio.map((item) => (
@@ -103,7 +96,6 @@ const AdminDashboardPage: React.FC = () => {
               </div>
 
               <div className="lg:col-span-1">
-                {/* El componente ActionPanel probablemente necesite ser adaptado también. */}
                 <ActionPanel 
                   request={selectedRequest}
                   onApprove={handleApprove}
