@@ -1,9 +1,41 @@
-
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import axios, { AxiosError } from 'axios'; 
+import axios, { AxiosError } from 'axios';
 import { useAuthStore } from '../store/authStore';
 
+interface ErrorResponse {
+  message?: string;
+  detail?: string | { msg: string }[];
+}
+
+function getLoginErrorMessage(err: unknown): string {
+  console.error('Error de login:', err);
+
+  if (!axios.isAxiosError(err)) {
+    return 'Ocurrió un error inesperado.';
+  }
+
+  const { response } = err as AxiosError<ErrorResponse>;
+  if (!response) {
+    return 'Ocurrió un error de red o de respuesta.';
+  }
+
+  const { status, data } = response;
+
+  if (status === 422 && data.detail && Array.isArray(data.detail)) {
+    return data.detail[0].msg;
+  }
+  
+  if (data?.detail && typeof data.detail === 'string') {
+    return data.detail;
+  }
+  
+  if (status === 401) {
+    return 'Correo o contraseña incorrectos.';
+  }
+
+  return 'Ocurrió un error. Intenta de nuevo.';
+}
 
 export default function LoginPage() {
   const [correo, setCorreo] = useState('');
@@ -18,26 +50,18 @@ export default function LoginPage() {
     setError(null); 
 
     try {
-      const response = await axios.post(`/api/auth/login`, {
-        correo: correo,
-        password: password,
-      });
+      const formData = new FormData();
+      formData.append('username', correo);
+      formData.append('password', password);
+
+      const response = await axios.post(`/api/auth/login`, formData);
 
       const { token, usuario } = response.data;
       login(token, usuario);
       navigate('/');
 
     } catch (err: unknown) { 
-      console.error('Error de login:', err);
-      let errorMessage = 'Ocurrió un error. Intenta de nuevo.';
-
-      
-      if (axios.isAxiosError(err)) {
-        const axiosError = err as AxiosError; 
-        if (axiosError.response && axiosError.response.status === 401) {
-          errorMessage = 'Correo o contraseña incorrectos.';
-        }
-      }
+      const errorMessage = getLoginErrorMessage(err);
       setError(errorMessage);
     }
   };

@@ -2,14 +2,19 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios, { AxiosError } from 'axios';
 
+// --- 1. ACTUALIZACIÓN DE INTERFAZ ---
+// Le decimos a TypeScript que la respuesta A VECES
+// puede traer una propiedad "detail".
 interface ErrorResponse {
   message?: string;
   errors?: {
     field: string;
     message: string;
   }[];
+  detail?: string; // <-- ¡LÍNEA AÑADIDA!
 }
 
+// (Tu componente FormField y tipo FormData se quedan igual)
 interface FormFieldProps {
   readonly label: string;
   readonly type: string;
@@ -48,13 +53,20 @@ type FormData = {
   password: string;
 };
 
+// --- 2. ACTUALIZACIÓN DEL "TRADUCTOR" DE ERRORES ---
 function parseValidationError(data: ErrorResponse | undefined): string {
+  // Primero buscamos el error "detail" que nos envió el backend
+  if (data?.detail) {
+    return data.detail; // <-- ¡LÍNEA AÑADIDA! Ej: "RUT inválido."
+  }
+  // Si no, buscamos los otros formatos que ya teníamos
   if (data?.message) {
     return data.message;
   }
   if (Array.isArray(data?.errors) && data.errors.length > 0) {
     return data.errors[0].message;
   }
+  // Si no encuentra ninguno, usa el genérico
   return 'Datos inválidos. Revisa el formato de los campos.';
 }
 
@@ -74,7 +86,7 @@ function getRegistrationErrorMessage(err: unknown): string {
   switch (status) {
     case 409:
       return 'El correo o RUT ya están registrados.';
-    case 400:
+    case 400: // El error "RUT inválido" es un 400
     case 422:
       return parseValidationError(data);
     default:
@@ -82,7 +94,8 @@ function getRegistrationErrorMessage(err: unknown): string {
   }
 }
 
-function RegisterPage() {
+// --- El resto de tu página (sin cambios) ---
+export default function RegisterPage() {
   const [formData, setFormData] = useState<FormData>({
     nombres: '',
     primer_apellido: '',
@@ -253,5 +266,3 @@ function RegisterPage() {
     </div>
   );
 }
-
-export default RegisterPage;
