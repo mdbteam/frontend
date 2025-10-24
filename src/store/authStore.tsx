@@ -4,7 +4,10 @@ import { persist } from 'zustand/middleware';
 interface User {
   id: string;
   nombres: string;
-  rol: string; 
+  rol: string;
+  foto_url?: string;
+  genero?: string; // <-- AÑADIR
+  fecha_de_nacimiento?: string; // <-- AÑADIR
 }
 
 interface AuthState {
@@ -21,21 +24,24 @@ export const useAuthStore = create(
       token: null,
       user: null,
       isAuthenticated: false,
-      
-      login: (token, user) => set({
-        token,
-        user,
-        isAuthenticated: true,
-      }),
-
-      logout: () => set({
-        token: null,
-        user: null,
-        isAuthenticated: false,
-      }),
+      login: (token, user) => {
+        set({
+          token,
+          user, 
+          isAuthenticated: true,
+        });
+      },
+      logout: () => {
+        set({
+          token: null,
+          user: null,
+          isAuthenticated: false,
+        });
+        localStorage.removeItem('auth-storage'); 
+      },
     }),
     {
-      name: 'auth-storage', 
+      name: 'auth-storage',
     }
   )
 );

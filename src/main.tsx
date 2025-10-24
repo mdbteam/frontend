@@ -14,6 +14,7 @@ import ProviderCalendarPage from './pages/ProviderCalendarPage';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 import RegisterPage from './pages/RegisterPage';
 import LoginPage from './pages/LoginPage';
+import UserProfilePage from './pages/UserProfilePage';
 
 const router = createBrowserRouter([
   {
@@ -21,12 +22,13 @@ const router = createBrowserRouter([
     children: [
       { path: "/", element: <HomePage /> },
       { path: "/prestadores", element: <PrestadorListPage /> },
-      { path: "/perfil/:prestadorId", element: <PrestadorProfilePage /> },
+      { path: "/prestadores/:prestadorId", element: <PrestadorProfilePage /> },
       { path: "/postular", element: <ProviderApplicationPage /> },
       { path: "/calendario", element: <ProviderCalendarPage /> },
       { path: "/administrador", element: <AdminDashboardPage /> },
       { path: "/login", element: <LoginPage /> },
-      {path: "/registro", element: <RegisterPage /> },
+      { path: "/registro", element: <RegisterPage /> },
+      { path: "/perfil", element: <UserProfilePage /> },
     ],
   },
 ]);
