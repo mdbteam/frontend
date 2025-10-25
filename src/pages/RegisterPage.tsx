@@ -2,19 +2,15 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios, { AxiosError } from 'axios';
 
-// --- 1. ACTUALIZACIÓN DE INTERFAZ ---
-// Le decimos a TypeScript que la respuesta A VECES
-// puede traer una propiedad "detail".
 interface ErrorResponse {
   message?: string;
   errors?: {
     field: string;
     message: string;
   }[];
-  detail?: string; // <-- ¡LÍNEA AÑADIDA!
+  detail?: string;
 }
 
-// (Tu componente FormField y tipo FormData se quedan igual)
 interface FormFieldProps {
   readonly label: string;
   readonly type: string;
@@ -51,22 +47,20 @@ type FormData = {
   correo: string;
   direccion: string;
   password: string;
+  fecha_de_nacimiento: string; 
+  genero: string;              
 };
 
-// --- 2. ACTUALIZACIÓN DEL "TRADUCTOR" DE ERRORES ---
 function parseValidationError(data: ErrorResponse | undefined): string {
-  // Primero buscamos el error "detail" que nos envió el backend
   if (data?.detail) {
-    return data.detail; // <-- ¡LÍNEA AÑADIDA! Ej: "RUT inválido."
+    return data.detail;
   }
-  // Si no, buscamos los otros formatos que ya teníamos
   if (data?.message) {
     return data.message;
   }
   if (Array.isArray(data?.errors) && data.errors.length > 0) {
     return data.errors[0].message;
   }
-  // Si no encuentra ninguno, usa el genérico
   return 'Datos inválidos. Revisa el formato de los campos.';
 }
 
@@ -86,7 +80,7 @@ function getRegistrationErrorMessage(err: unknown): string {
   switch (status) {
     case 409:
       return 'El correo o RUT ya están registrados.';
-    case 400: // El error "RUT inválido" es un 400
+    case 400:
     case 422:
       return parseValidationError(data);
     default:
@@ -94,7 +88,7 @@ function getRegistrationErrorMessage(err: unknown): string {
   }
 }
 
-// --- El resto de tu página (sin cambios) ---
+
 export default function RegisterPage() {
   const [formData, setFormData] = useState<FormData>({
     nombres: '',
@@ -104,6 +98,8 @@ export default function RegisterPage() {
     correo: '',
     direccion: '',
     password: '',
+    fecha_de_nacimiento: '', 
+    genero: '',              
   });
   
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -114,6 +110,13 @@ export default function RegisterPage() {
 
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
@@ -154,7 +157,6 @@ export default function RegisterPage() {
 
         <form onSubmit={handleSubmit} className="space-y-6 bg-slate-800/50 border border-slate-700 p-8 rounded-lg">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            
             <FormField 
               label="Nombres" 
               type="text" 
@@ -191,6 +193,34 @@ export default function RegisterPage() {
               value={formData.rut}
               onChange={handleChange}
             />
+            
+            <FormField 
+              label="Fecha de Nacimiento" 
+              type="date" 
+              id="fecha_de_nacimiento" 
+              name="fecha_de_nacimiento"
+              placeholder=""
+              value={formData.fecha_de_nacimiento}
+              onChange={handleChange}
+            />
+
+            <div>
+              <label htmlFor="genero" className="block mb-2 text-sm font-medium text-slate-200">Género</label>
+              <select
+                id="genero"
+                name="genero"
+                className="w-full rounded-lg border border-slate-700 bg-slate-800 p-3 text-base text-white focus:border-cyan-400 focus:ring-cyan-400"
+                value={formData.genero}
+                onChange={handleSelectChange}
+                required
+              >
+                <option value="" disabled>Selecciona tu género</option>
+                <option value="masculino">Masculino</option>
+                <option value="femenino">Femenino</option>
+                <option value="prefiero_no_decir">Prefiero no decir</option>
+              </select>
+            </div>
+
           </div>
           
           <FormField 
@@ -222,7 +252,6 @@ export default function RegisterPage() {
               value={formData.password}
               onChange={handleChange}
             />
-          
             <div>
               <label htmlFor="confirm_password" className="block mb-2 text-sm font-medium text-slate-200">Confirmar Contraseña</label>
               <input

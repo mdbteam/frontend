@@ -1,12 +1,32 @@
 {
   "rewrites": [
     {
+      "source": "/api/prestadores/:path*",
+      "destination": "https://provider-service-mjuj.onrender.com/prestadores/:path*"
+    },
+    {
+      "source": "/api/postulaciones/:path*",
+      "destination": "https://provider-service-mjuj.onrender.com/postulaciones/:path*"
+    },
+    {
+      "source": "/api/trabajos/:path*",
+      "destination": "https://provider-service-mjuj.onrender.com/trabajos/:path*"
+    },
+    {
+      "source": "/api/users/:path*",
+      "destination": "https://provider-service-mjuj.onrender.com/users/:path*"
+    },
+    {
+      "source": "/api/profile/:path*",
+      "destination": "https://provider-service-mjuj.onrender.com/profile/:path*"
+    },
+    {
       "source": "/api/:path*",
       "destination": "https://auth-service-1-8301.onrender.com/:path*"
     },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
+    { 
+      "source": "/(.*)", 
+      "destination": "/index.html" 
     }
   ]
 }
