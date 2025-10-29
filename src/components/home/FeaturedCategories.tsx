@@ -5,6 +5,7 @@ const categories = [
   { name: 'Pintura', icon: '🎨', slug: 'pintura' },
   { name: 'Jardinería', icon: '🌿', slug: 'jardineria' },
   { name: 'Limpieza', icon: '🧼', slug: 'limpieza' },
+  { name: 'Otros', icon: '🚚', slug: 'otros' }
 ];
 
 export function FeaturedCategories() {
@@ -14,7 +15,7 @@ export function FeaturedCategories() {
         <h2 className="mb-8 text-center text-3xl font-extrabold text-gray-900">
           Explora por Categoría
         </h2>
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-7">
           {categories.map((category) => (
             <a
               key={category.name}

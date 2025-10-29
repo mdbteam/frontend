@@ -1,213 +1,171 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
+import { useForm, type SubmitHandler } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { useAuthStore } from '../store/authStore';
-import { FileUpload } from '../components/form/FileUpload';
 
-// --- MANEJO DE ERRORES ---
-// (Similar al de RegisterPage, pero para la postulación)
-interface ErrorResponse {
-  message?: string;
-  errors?: {
-    field: string;
-    message: string;
-  }[];
-}
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+const ACCEPTED_DOC_TYPES = ["application/pdf"];
 
-function parsePostulacionError(data: ErrorResponse | undefined): string {
-  if (data?.message) {
-    return data.message;
-  }
-  if (Array.isArray(data?.errors) && data.errors.length > 0) {
-    return data.errors[0].message;
-  }
-  return 'Datos inválidos. Revisa el formato de los campos o archivos.';
-}
+const fileSchema = (types: string[]) =>
+  z.instanceof(FileList)
+    .refine(files => files.length === 1, "Este campo es requerido.")
+    .refine(files => files.length > 0 && files[0].size <= MAX_FILE_SIZE, "El archivo no puede pesar más de 5MB.")
+    .refine(files => files.length > 0 && types.includes(files[0].type), "Formato de archivo no soportado.");
 
-function getPostulacionErrorMessage(err: unknown): string {
-  console.error('Error de postulación:', err);
+const postulacionSchema = z.object({
+  categoria: z.string().min(1, "Debes seleccionar una categoría"),
+  anos_experiencia: z.coerce.number().min(0, "Debe ser un número positivo").max(50, "No puedes tener más de 50 años de experiencia"),
+  comunas_cobertura: z.string().min(1, "Indica al menos una comuna"),
+  resumen_profesional: z.string().min(50, "El resumen debe tener al menos 50 caracteres"),
+  foto_carnet_frente: fileSchema(ACCEPTED_IMAGE_TYPES),
+  foto_carnet_reverso: fileSchema(ACCEPTED_IMAGE_TYPES),
+  certificado_antecedentes: fileSchema(ACCEPTED_DOC_TYPES),
+});
 
-  if (!axios.isAxiosError(err)) {
-    return 'Ocurrió un error inesperado.';
-  }
+type PostulacionFormInputs = z.infer<typeof postulacionSchema>;
 
-  const { response } = err as AxiosError<ErrorResponse>;
-  if (!response) {
-    return 'Ocurrió un error de red o de respuesta.';
-  }
-
-  const { status, data } = response;
-  switch (status) {
-    case 401:
-      return 'No autorizado. Debes iniciar sesión.';
-    case 400:
-    case 422:
-      return parsePostulacionError(data);
-    default:
-      return 'Ocurrió un error inesperado en el servidor.';
-  }
-}
-
-// --- COMPONENTE DE PÁGINA ---
-function ProviderApplicationPage() {
-  // 1. Estados para controlar el formulario
-  const [oficio, setOficio] = useState('');
-  const [bio, setBio] = useState('');
-  const [portafolioFiles, setPortafolioFiles] = useState<File[]>([]);
-  const [certificadoFiles, setCertificadoFiles] = useState<File[]>([]);
-  
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-
-  // 2. Obtenemos el token de autenticación del store
-  const token = useAuthStore((state) => state.token);
+export default function ProviderApplicationPage() {
+  const [serverError, setServerError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const token = useAuthStore((state) => state.token);
 
-  // 3. Lógica de envío
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setSuccess(null);
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm({
+    resolver: zodResolver(postulacionSchema),
+  });
 
-    // Verificación de autenticación
-    if (!token) {
-      setError('Debes iniciar sesión para poder postular.');
-      return;
-    }
+  const onSubmit: SubmitHandler<PostulacionFormInputs> = async (data) => {
+    setServerError(null);
 
-    // 4. Creamos el FormData para enviar archivos
     const formData = new FormData();
-    formData.append('oficio', oficio);
-    formData.append('bio', bio);
-    
-    // Adjuntamos los archivos
-    portafolioFiles.forEach(file => {
-      formData.append('archivos_portafolio', file);
-    });
-    certificadoFiles.forEach(file => {
-      formData.append('archivos_certificados', file);
-    });
+    formData.append('categoria', data.categoria);
+    formData.append('anos_experiencia', String(data.anos_experiencia));
+    formData.append('comunas_cobertura', data.comunas_cobertura);
+    formData.append('resumen_profesional', data.resumen_profesional);
+    formData.append('foto_carnet_frente', data.foto_carnet_frente[0]);
+    formData.append('foto_carnet_reverso', data.foto_carnet_reverso[0]);
+    formData.append('certificado_antecedentes', data.certificado_antecedentes[0]);
 
     try {
-      // 5. Enviamos la solicitud (con el token y tipo de contenido)
-      const response = await axios.post('/api/postulaciones', formData, {
+      await axios.post(`/api/postulaciones`, formData, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'multipart/form-data',
-        },
+        }
       });
 
-      setSuccess(response.data.mensaje || '¡Postulación enviada con éxito!');
-      // Limpiamos el formulario
-      setOficio('');
-      setBio('');
-      setPortafolioFiles([]);
-      setCertificadoFiles([]);
-      // (Idealmente, tu componente FileUpload debería tener un prop para resetearse)
-
-      setTimeout(() => {
-        // Redirigimos al perfil del usuario o al home
-        navigate('/'); 
-      }, 3000);
+      navigate('/perfil?postulacion=exitosa');
 
     } catch (err: unknown) {
-      // 6. Manejo de errores
-      const errorMessage = getPostulacionErrorMessage(err);
-      setError(errorMessage);
+      let message = "Ocurrió un error al enviar tu postulación. Revisa los archivos e intenta de nuevo.";
+      if (axios.isAxiosError(err) && err.response?.status === 422) {
+        message = "Los archivos enviados no son válidos o están corruptos.";
+      }
+      setServerError(message);
     }
   };
 
+  const InputError = ({ message }: { message?: string }) =>
+    message ? <p className="mt-1 text-sm text-red-400">{message}</p> : null;
+
+  const getBorderClass = (fieldName: keyof PostulacionFormInputs) =>
+    errors[fieldName] ? 'border-red-500' : 'border-slate-700';
 
   return (
-    // 7. DISEÑO: Tema oscuro aplicado
-    <div className="bg-slate-900 flex items-center justify-center min-h-screen p-4 sm:p-8">
-      <div className="mx-auto w-full max-w-3xl">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-white font-poppins [text-shadow:0_0_15px_rgba(34,211,238,0.4)]">
-            Postula para ser Agente
-          </h1>
-          <p className="mt-3 text-lg text-slate-400">Únete a la red de profesionales de Chambee.</p>
-        </div>
+    <div className="flex justify-center items-start min-h-screen p-4 sm:p-8 bg-slate-900">
+      <div className="w-full max-w-2xl">
+        <h1 className="text-4xl font-bold text-white font-poppins mb-4 text-center [text-shadow:0_0_15px_rgba(34,211,238,0.4)]">
+          Postular como Agente
+        </h1>
 
-        {/* 8. Conectamos el formulario al handleSubmit */}
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <p className="text-center text-sm text-slate-300 mb-6">
+          Completa tu perfil profesional. <span className="text-cyan-400">*</span> Campos obligatorios
+        </p>
 
-          {/* 9. LÓGICA: Sección de Identificación ELIMINADA */}
+        <form onSubmit={handleSubmit(onSubmit)} className="bg-slate-800/50 border border-slate-700 rounded-lg p-6 sm:p-8 space-y-6 backdrop-blur-sm shadow-lg">
 
-          <div className="p-6 bg-slate-800/50 border border-slate-700 rounded-lg shadow-sm backdrop-blur-sm">
-            <h2 className="text-xl font-semibold text-yellow-400 mb-6 font-poppins border-b border-slate-700 pb-3">Perfil Profesional</h2>
+          <fieldset className="space-y-4">
+            <legend className="text-lg font-semibold text-white">Información Profesional</legend>
+
             <div>
-              <label htmlFor="oficio" className="block mb-2 text-sm font-medium text-slate-300">Oficio o Profesión Principal</label>
-              {/* 10. Conectamos los campos al estado */}
-              <input 
-                type="text" 
-                id="oficio" 
-                placeholder="Ej: Gasfitería, Electricidad Certificada" 
-                className="w-full rounded-lg border border-slate-700 bg-slate-900 p-3 text-base text-white focus:border-cyan-400 focus:ring-cyan-400"
-                value={oficio}
-                onChange={(e) => setOficio(e.target.value)}
-                required
-              />
+              <label htmlFor="categoria" className="block text-sm font-medium text-slate-300">Categoría Principal *</label>
+              <select id="categoria" {...register("categoria")}
+                className={`mt-1 block w-full input-base rounded-md bg-slate-800 text-white p-3 border ${getBorderClass('categoria')} focus:border-cyan-400 focus:ring focus:ring-cyan-400/30`}>
+                <option value="">Selecciona tu especialidad</option>
+                <option value="plomeria">Plomería (Gasfitería)</option>
+                <option value="electricidad">Electricidad</option>
+                <option value="carpinteria">Carpintería</option>
+                <option value="pintura">Pintura</option>
+                <option value="albanileria">Albañilería</option>
+              </select>
+              <InputError message={errors.categoria?.message} />
             </div>
-            <div className="mt-6">
-              <label htmlFor="bio" className="block mb-2 text-sm font-medium text-slate-300">Cuéntanos sobre ti y tu experiencia (Bio)</label>
-              <textarea 
-                id="bio" 
-                rows={4} 
-                className="w-full rounded-lg border border-slate-700 bg-slate-900 p-3 text-base text-white focus:border-cyan-400 focus:ring-cyan-400" 
-                placeholder="Describe brevemente tus servicios, años de experiencia, etc."
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
-                required
-              ></textarea>
-            </div>
-          </div>
 
-          <div className="p-6 bg-slate-800/50 border border-slate-700 rounded-lg shadow-sm backdrop-blur-sm">
-            <h2 className="text-xl font-semibold text-yellow-400 mb-6 font-poppins border-b border-slate-700 pb-3">Documentación</h2>
-            <div className="space-y-6">
-                <FileUpload
-                    label="Portafolio de Trabajos"
-                    helpText="Sube imágenes de tus mejores trabajos (JPG, PNG, GIF)"
-                    acceptedFileTypes="image/*"
-                    onFilesChange={(files) => setPortafolioFiles(files)}
-                    files={portafolioFiles} // <-- AÑADE ESTA LÍNEA
-                />
-                <FileUpload
-                    label="Certificados y Documentos"
-                    helpText="Cédula de identidad, certificados de estudios, etc. (PDF, JPG, PNG)"
-                    acceptedFileTypes=".pdf,image/jpeg,image.png"
-                    onFilesChange={(files) => setCertificadoFiles(files)}
-                    files={certificadoFiles} // <-- AÑADE ESTA LÍNEA
-                />
+            <div>
+              <label htmlFor="anos_experiencia" className="block text-sm font-medium text-slate-300">Años de Experiencia *</label>
+              <input type="number" id="anos_experiencia" {...register("anos_experiencia")}
+                className={`mt-1 block w-full input-base rounded-md bg-slate-800 text-white p-3 border ${getBorderClass('anos_experiencia')} focus:border-cyan-400 focus:ring focus:ring-cyan-400/30`} />
+              <InputError message={errors.anos_experiencia?.message} />
             </div>
-          </div>
 
-          {/* 12. Mensajes de éxito y error */}
-          {error && (
-            <div className="text-center text-red-400 text-sm p-4 bg-red-900/20 border border-red-500 rounded-lg">
-              {error}
+            <div>
+              <label htmlFor="comunas_cobertura" className="block text-sm font-medium text-slate-300">Comunas de Cobertura *</label>
+              <input type="text" id="comunas_cobertura" {...register("comunas_cobertura")}
+                placeholder="Ej: Las Condes, Providencia, Santiago"
+                className={`mt-1 block w-full input-base rounded-md bg-slate-800 text-white p-3 border ${getBorderClass('comunas_cobertura')} focus:border-cyan-400 focus:ring focus:ring-cyan-400/30`} />
+              <InputError message={errors.comunas_cobertura?.message} />
             </div>
-          )}
-          {success && (
-            <div className="text-center text-green-400 text-sm p-4 bg-green-900/20 border border-green-500 rounded-lg">
-              {success}
+
+            <div>
+              <label htmlFor="resumen_profesional" className="block text-sm font-medium text-slate-300">Resumen Profesional *</label>
+              <textarea id="resumen_profesional" rows={4} {...register("resumen_profesional")}
+                placeholder="Habla sobre ti, tu experiencia y lo que te destaca. (Mín. 50 caracteres)"
+                className={`mt-1 block w-full input-base rounded-md bg-slate-800 text-white p-3 border ${getBorderClass('resumen_profesional')} focus:border-cyan-400 focus:ring focus:ring-cyan-400/30`} />
+              <InputError message={errors.resumen_profesional?.message} />
             </div>
+          </fieldset>
+
+          <fieldset className="space-y-4">
+            <legend className="text-lg font-semibold text-white">Documentación de Identidad</legend>
+
+            <div>
+              <label htmlFor="foto_carnet_frente" className="block text-sm font-medium text-slate-300">Cédula de Identidad (Frente) *</label>
+              <input type="file" id="foto_carnet_frente" accept={ACCEPTED_IMAGE_TYPES.join(',')} {...register("foto_carnet_frente")}
+                className={`mt-1 block w-full text-slate-300 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-cyan-500 file:text-white hover:file:bg-cyan-400 ${getBorderClass('foto_carnet_frente')}`} />
+              <InputError message={errors.foto_carnet_frente?.message} />
+            </div>
+
+            <div>
+              <label htmlFor="foto_carnet_reverso" className="block text-sm font-medium text-slate-300">Cédula de Identidad (Reverso) *</label>
+              <input type="file" id="foto_carnet_reverso" accept={ACCEPTED_IMAGE_TYPES.join(',')} {...register("foto_carnet_reverso")}
+                className={`mt-1 block w-full text-slate-300 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-cyan-500 file:text-white hover:file:bg-cyan-400 ${getBorderClass('foto_carnet_reverso')}`} />
+              <InputError message={errors.foto_carnet_reverso?.message} />
+            </div>
+
+            <div>
+              <label htmlFor="certificado_antecedentes" className="block text-sm font-medium text-slate-300">Certificado de Antecedentes (PDF) *</label>
+              <input type="file" id="certificado_antecedentes" accept={ACCEPTED_DOC_TYPES.join(',')} {...register("certificado_antecedentes")}
+                className={`mt-1 block w-full text-slate-300 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-cyan-500 file:text-white hover:file:bg-cyan-400 ${getBorderClass('certificado_antecedentes')}`} />
+              <InputError message={errors.certificado_antecedentes?.message} />
+            </div>
+          </fieldset>
+
+          {serverError && (
+            <div className="text-center text-red-400 text-sm">{serverError}</div>
           )}
-          
-          <div className="text-center pt-4">
-            <button
-              type="submit"
-              disabled={!!success}
-              className="w-full md:w-auto rounded-lg bg-cyan-500 px-10 py-4 text-lg font-bold text-white shadow-lg hover:bg-cyan-400 focus:outline-none focus:ring-4 focus:ring-cyan-500/50 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
-            >
-              Enviar Postulación
-            </button>
-          </div>
+
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full flex justify-center py-3 px-4 rounded-md text-base font-medium text-white bg-cyan-500 hover:bg-cyan-400 transition-colors disabled:opacity-50"
+          >
+            {isSubmitting ? "Enviando Postulación..." : "Enviar Postulación"}
+          </button>
         </form>
       </div>
     </div>
   );
 }
-
-export default ProviderApplicationPage;

@@ -55,3 +55,9 @@ body {
   border-color: #0e7490 !important; /* border-cyan-700 */
   cursor: pointer;
 }
+
+  @layer components {
+    .input-base {
+      @apply px-3 py-2 bg-slate-900 border border-slate-700 rounded-md text-white shadow-sm focus:outline-none focus:ring-cyan-500 focus:border-cyan-500;
+    }
+  }
