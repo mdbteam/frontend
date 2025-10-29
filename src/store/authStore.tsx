@@ -6,15 +6,10 @@ const AUTH_SERVICE = 'https://auth-service-1-8301.onrender.com'
 interface User {
   id: string;
   nombres: string;
-  primer_apellido: string;
-  segundo_apellido: string | null;
-  rut: string;
-  correo: string;
-  direccion: string | null;
   rol: string;
-  foto_url: string;
-  genero: string | null;
-  fecha_nacimiento: string | null;
+  foto_url?: string;
+  genero?: string; // <-- AÑADIR
+  fecha_de_nacimiento?: string; // <-- AÑADIR
 }
 
 interface AuthState {
