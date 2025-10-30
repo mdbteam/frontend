@@ -1,37 +1,79 @@
-import { useState, useEffect } from 'react';
-import type { ProviderRequest } from '../../data/mockAdminData'; 
-import { mockProviderRequests } from '../../data/mockAdminData';
+import { useState } from 'react';
+import axios from 'axios';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuthStore } from '../../store/authStore';
+
+import type { Postulacion } from '../../types/adminTypes';
 import RequestsTable from '../../components/admin/RequestsTable';
 import ActionPanel from '../../components/admin/ActionPanel';
-import {ProfileHeader} from '../../components/profile/ProfileHeader';
-import { ServiceCard } from '../../components/profile/ServiceCard'; 
+import { ProfileHeader } from '../../components/profile/ProfileHeader';
+import { ServiceCard } from '../../components/profile/ServiceCard';
 import PortfolioItem from '../../components/profile/PortfolioItem';
+import { FaSpinner } from 'react-icons/fa';
+
+// --- Funciones de API ---
+
+const fetchPendientes = async (token: string | null) => {
+  if (!token) throw new Error('No autenticado');
+  const { data } = await axios.get<Postulacion[]>('/api/postulaciones/pendientes', {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return data;
+};
+
+const approvePostulacion = (id: string, token: string | null) => {
+  return axios.post(`/api/postulaciones/${id}/aprobar`, {}, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+};
+
+const rejectPostulacion = (id: string, token: string | null) => {
+  return axios.post(`/api/postulaciones/${id}/rechazar`, {}, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+};
+
+const requestModification = (id: string, token: string | null) => {
+  return axios.post(`/api/postulaciones/${id}/modificar`, {}, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+};
+
 
 const AdminDashboardPage: React.FC = () => {
-  const [requests, setRequests] = useState<ProviderRequest[]>([]);
-  const [selectedRequest, setSelectedRequest] = useState<ProviderRequest | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<Postulacion | null>(null);
+  const queryClient = useQueryClient();
+  const { token } = useAuthStore();
 
-  useEffect(() => {
-    setRequests(mockProviderRequests);
-  }, []);
+  const { data: requests, isLoading, error } = useQuery({
+    queryKey: ['postulacionesPendientes'],
+    queryFn: () => fetchPendientes(token),
+  });
 
-  const handleSelectRequest = (request: ProviderRequest) => {
+  // --- CORRECCIÓN: Cambiado Promise<any> a Promise<unknown> ---
+  const usePostulacionAction = (mutationFn: (id: string, token: string | null) => Promise<unknown>) => {
+    return useMutation({
+      mutationFn: (id: string) => mutationFn(id, token),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['postulacionesPendientes'] });
+        setSelectedRequest(null);
+      },
+      onError: (err) => {
+        console.error("Error en la acción de admin:", err);
+        alert("Ocurrió un error al procesar la solicitud.");
+      }
+    });
+  };
+
+  const approveMutation = usePostulacionAction(approvePostulacion);
+  const rejectMutation = usePostulacionAction(rejectPostulacion);
+  const modifyMutation = usePostulacionAction(requestModification);
+
+  const handleSelectRequest = (request: Postulacion) => {
     setSelectedRequest(request);
   };
 
   const handleGoBack = () => {
-    setSelectedRequest(null);
-  };
-
-  const handleApprove = (id: string) => {
-    alert(`Perfil ${id} aprobado.`);
-    setRequests(prev => prev.map(r => r.id === id ? { ...r, status: 'Aprobado' } : r));
-    setSelectedRequest(null);
-  };
-
-  const handleReject = (id: string) => {
-    alert(`Perfil ${id} rechazado.`);
-    setRequests(prev => prev.map(r => r.id === id ? { ...r, status: 'Rechazado' } : r));
     setSelectedRequest(null);
   };
 
@@ -48,9 +90,23 @@ const AdminDashboardPage: React.FC = () => {
       </header>
 
       <main>
-        {!selectedRequest ? (
+        {isLoading && (
+          <div className="flex justify-center items-center h-64">
+            <FaSpinner className="animate-spin text-cyan-400 text-3xl" />
+          </div>
+        )}
+        {error && (
+          <div className="p-8 text-center text-red-400 bg-slate-800/50 rounded-lg">
+            <p>Error al cargar las postulaciones. El endpoint del backend podría estar fallando.</p>
+            <p className="text-sm text-red-500">{(error as Error).message}</p>
+          </div>
+        )}
+
+        {requests && !selectedRequest && (
           <RequestsTable requests={requests} onSelectRequest={handleSelectRequest} />
-        ) : (
+        )}
+        
+        {requests && selectedRequest && (
           <div>
             <button onClick={handleGoBack} className="mb-6 text-cyan-400 hover:text-cyan-300 font-semibold">
               &larr; Volver al Dashboard
@@ -60,7 +116,7 @@ const AdminDashboardPage: React.FC = () => {
               <div className="lg:col-span-2 bg-slate-800/50 border border-slate-700 p-6 rounded-lg space-y-8">
                 <ProfileHeader
                     nombres={selectedRequest.providerName}
-                    primer_apellido={""}
+                    primer_apellido={""} // TODO: Pedir a backend que añada este campo
                     oficio={selectedRequest.serviceCategory}
                     fotoUrl={selectedRequest.profileData.avatarUrl}
                     resumen={selectedRequest.profileData.description}
@@ -98,8 +154,9 @@ const AdminDashboardPage: React.FC = () => {
               <div className="lg:col-span-1">
                 <ActionPanel 
                   request={selectedRequest}
-                  onApprove={handleApprove}
-                  onReject={handleReject}
+                  onApprove={approveMutation.mutate}
+                  onReject={rejectMutation.mutate}
+                  onRequestModification={modifyMutation.mutate}
                 />
               </div>
 
