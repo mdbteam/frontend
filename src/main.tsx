@@ -1,40 +1,48 @@
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import { RouterProvider, createBrowserRouter } from 'react-router-dom'
 
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import { createBrowserRouter, RouterProvider} from 'react-router-dom';
-import './index.css';
-import { AppLayout } from './components/layout/AppLayout';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+
+import './index.css'
+
+// Importar Layout y Páginas
+import { AppLayout } from './components/layout/AppLayout'
+import HomePage from './pages/HomePage'
+import LoginPage from './pages/LoginPage'
+import RegisterPage from './pages/RegisterPage'
+import UserProfilePage from './pages/UserProfilePage'
+import ProviderApplicationPage from './pages/ProviderApplicationPage'
+import PrestadorListPage from './pages/PrestadorListPage' 
+import PrestadorDetailPage from './pages/PrestadorDetailPage'
+import ProviderCalendarPage from './pages/ProviderCalendarPage'
+import AdminDashboardPage from './pages/admin/AdminDashboardPage' 
 
 
-import HomePage from './pages/HomePage';
-import PrestadorListPage from './pages/PrestadorListPage';
-import PrestadorProfilePage from './pages/PrestadorProfilePage';
-import ProviderApplicationPage from './pages/ProviderApplicationPage';
-import ProviderCalendarPage from './pages/ProviderCalendarPage';
-import AdminDashboardPage from './pages/admin/AdminDashboardPage';
-import RegisterPage from './pages/RegisterPage';
-import LoginPage from './pages/LoginPage';
-import UserProfilePage from './pages/UserProfilePage';
+const queryClient = new QueryClient()
 
 const router = createBrowserRouter([
   {
-    element: <AppLayout></AppLayout>,
+    path: '/',
+    element: <AppLayout />,
     children: [
-      { path: "/", element: <HomePage /> },
-      { path: "/prestadores", element: <PrestadorListPage /> },
-      { path: "/prestadores/:prestadorId", element: <PrestadorProfilePage /> },
-      { path: "/postular", element: <ProviderApplicationPage /> },
-      { path: "/calendario", element: <ProviderCalendarPage /> },
-      { path: "/administrador", element: <AdminDashboardPage /> },
-      { path: "/login", element: <LoginPage /> },
-      { path: "/registro", element: <RegisterPage /> },
-      { path: "/perfil", element: <UserProfilePage /> },
-    ],
-  },
-]);
+      { index: true, element: <HomePage /> },
+      { path: '/login', element: <LoginPage /> },
+      { path: '/registro', element: <RegisterPage /> },
+      { path: '/perfil', element: <UserProfilePage /> },
+      { path: '/postular', element: <ProviderApplicationPage /> },
+      { path: '/prestadores', element: <PrestadorListPage /> },
+      { path: '/prestadores/:id', element: <PrestadorDetailPage /> },
+      { path: '/calendario', element: <ProviderCalendarPage /> },
+      { path: '/administrador', element: <AdminDashboardPage /> },
+    ]
+  }
+])
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <RouterProvider router={router} />
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>
   </React.StrictMode>
-);
+)

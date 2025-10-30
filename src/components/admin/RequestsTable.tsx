@@ -1,18 +1,15 @@
-
-import type { ProviderRequest } from '../../data/mockAdminData';
+import type { Postulacion } from '../../types/adminTypes'; 
 import StatusLabel from './StatusLabel';
 
 interface RequestsTableProps {
-  requests: ProviderRequest[];
-  onSelectRequest: (request: ProviderRequest) => void;
+  requests: Postulacion[]; 
+  onSelectRequest: (request: Postulacion) => void; 
 }
 
 const RequestsTable: React.FC<RequestsTableProps> = ({ requests, onSelectRequest }) => {
   return (
-    // SOLUCIÓN: Cambiamos el fondo a uno oscuro y semitransparente.
     <div className="overflow-x-auto bg-slate-800/50 rounded-lg border border-slate-700">
       <table className="min-w-full divide-y divide-slate-700">
-        {/* SOLUCIÓN: Adaptamos el encabezado de la tabla al tema oscuro. */}
         <thead className="bg-slate-900/50">
           <tr>
             <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Nombre Prestador</th>
@@ -22,7 +19,6 @@ const RequestsTable: React.FC<RequestsTableProps> = ({ requests, onSelectRequest
             <th className="px-6 py-3 text-right text-xs font-medium text-slate-400 uppercase tracking-wider">Acción</th>
           </tr>
         </thead>
-        {/* SOLUCIÓN: Adaptamos el cuerpo de la tabla al tema oscuro. */}
         <tbody className="divide-y divide-slate-700">
           {requests.map((request) => (
             <tr key={request.id} className="hover:bg-slate-700/50 transition-colors duration-200">

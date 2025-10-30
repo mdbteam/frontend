@@ -1,9 +1,8 @@
-
 interface PortfolioItemProps {
   readonly imageUrl: string;
   readonly title: string;
   readonly description?: string; 
-  readonly linkUrl?: string;     
+  readonly linkUrl?: string;      
 }
 
 function PortfolioItem({ imageUrl, title, description, linkUrl }: PortfolioItemProps) {
@@ -34,7 +33,6 @@ function PortfolioItem({ imageUrl, title, description, linkUrl }: PortfolioItemP
       </a>
     );
   }
-
 
   return content;
 }
