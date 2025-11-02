@@ -1,31 +1,12 @@
 
-export type ApplicationStatus = 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Requiere Modificación';
-
-
-interface ProfileService {
-  title: string;
-  price: string;
-}
-
-interface ProfilePortfolioItem {
-  title: string;
-  imageUrl: string;
-  description: string;
-}
-
-interface ProfileData {
-  avatarUrl: string;
-  description: string | null; 
-  services: ProfileService[];
-  portfolio: ProfilePortfolioItem[];
-}
+export type ApplicationStatus = 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Requiere Modificación' | string;
 
 export interface Postulacion {
-  id: string;
-  providerName: string;
-  rut: string;
-  serviceCategory: string;
-  submissionDate: string;
-  status: ApplicationStatus;
-  profileData: ProfileData; 
+  id_postulacion: number;
+  id_usuario: number;
+  nombres: string;
+  primer_apellido: string;
+  correo: string;
+  fecha_postulacion: string; 
+  estado: ApplicationStatus;
 }
