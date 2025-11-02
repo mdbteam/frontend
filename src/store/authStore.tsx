@@ -6,8 +6,8 @@ interface User {
   nombres: string;
   rol: string;
   foto_url?: string;
-  genero?: string; // <-- AÑADIR
-  fecha_de_nacimiento?: string; // <-- AÑADIR
+  genero?: string; 
+  fecha_de_nacimiento?: string;
 }
 
 interface AuthState {
