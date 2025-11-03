@@ -149,7 +149,7 @@ function CreateTrabajoModal({ cita, isOpen, onClose, onSuccess, onError }: { cit
           </div>
           <DialogFooter>
             <Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button>
-            <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Enviando..." : "Enviar Propuesta"}</Button>
+            <Button type="submit" variant="default" disabled={isSubmitting}>{isSubmitting ? "Enviando..." : "Enviar Propuesta"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -219,7 +219,7 @@ function RateTrabajoModal({ trabajo, isOpen, onClose, onSuccess, onError }: { tr
           </div>
           <DialogFooter>
             <Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button>
-            <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Enviando..." : "Enviar Valoración"}</Button>
+            <Button type="submit" variant="default" disabled={isSubmitting}>{isSubmitting ? "Enviando..." : "Enviar Valoración"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -397,8 +397,6 @@ export function MyCitasList() {
 
             <div className="flex-shrink-0 flex flex-col sm:items-end gap-2">
               <CitaStatusBadge cita={cita} />
-
-              {/* --- 4. CORRECCIÓN: Botones con 'variant' y 'className' correctos --- */}
 
               {/* -- Lógica del Prestador -- */}
               {esPrestador && !cita.id_trabajo && (cita.estado === 'pendiente' || cita.estado === 'aceptada' || cita.estado === 'completada') && (

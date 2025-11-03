@@ -20,6 +20,9 @@ import {
   DialogTitle,
 } from '../components/ui/dialog';
 import { InfoDialog } from '../components/ui/InfoDialog';
+import { Button } from '../components/ui/button';
+import { Textarea } from '../components/ui/textarea';
+import { Label } from '../components/ui/label';
 
 // --- (Tipos de Datos de la API) ---
 interface PerfilDetalle { id_usuario: number; nombres: string; primer_apellido: string; foto_url: string; genero: string | null; fecha_nacimiento: string | null; biografia: string | null; resumen_profesional: string | null; anos_experiencia: number | null; }
@@ -219,7 +222,6 @@ export default function PrestadorDetailPage() {
       <div className="p-4 sm:p-8">
         <div className="mx-auto max-w-6xl grid grid-cols-1 md:grid-cols-3 gap-8">
           
-          {/* --- Columna Izquierda: Perfil Detallado --- */}
           <div className="md:col-span-1 space-y-6">
             <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-6 text-center">
               {profile.foto_url ? (
@@ -262,7 +264,6 @@ export default function PrestadorDetailPage() {
               </div>
             )}
 
-            {/* --- 1. SECCIÓN PORTAFOLIO (NUEVA) --- */}
             {profile.portafolio.length > 0 && (
               <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-white mb-4">Portafolio</h3>
@@ -274,7 +275,6 @@ export default function PrestadorDetailPage() {
               </div>
             )}
 
-            {/* --- 2. SECCIÓN EXPERIENCIA (NUEVA) --- */}
             {profile.experiencia.length > 0 && (
               <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-white mb-4">Experiencia Laboral</h3>
@@ -298,7 +298,6 @@ export default function PrestadorDetailPage() {
             )}
           </div>
 
-          {/* --- Columna Derecha: Calendario y Reseñas --- */}
           <div className="md:col-span-2 space-y-8">
             <div>
               <div className="mb-6"><h2 className="text-3xl font-bold text-white font-poppins [text-shadow:0_0_15px_rgba(234,179,8,0.4)]">Agenda tu Cita</h2><p className="mt-1 text-slate-300">Selecciona un horario "Disponible" para enviar una solicitud.</p></div>
@@ -359,20 +358,27 @@ export default function PrestadorDetailPage() {
             </DialogHeader>
             <form onSubmit={handleSubmit(onCitaSubmit)} className="grid gap-4 py-4">
               <div>
-                <label htmlFor="detalles" className="block text-sm font-medium text-slate-300 mb-1">Breve descripción del trabajo</label>
-                <textarea
+                <Label htmlFor="detalles" className="mb-1">Breve descripción del trabajo</Label>
+                <Textarea
                   id="detalles" rows={3}
-                  className={`w-full input-base ${errors.detalles ? 'border-red-500' : 'border-slate-700'}`}
+                  className={errors.detalles ? 'border-red-500' : ''}
                   {...register("detalles", { required: "Este campo es obligatorio" })}
                   placeholder="Ej: Reparar filtración en lavaplatos..."
                 />
                 {errors.detalles && <p className="mt-1 text-sm text-red-400">{errors.detalles.message}</p>}
               </div>
               <DialogFooter>
-                <button type="button" onClick={handleCloseModal} className="btn-secondary">Cancelar</button>
-                <button type="submit" disabled={isSubmitting || createCitaMutation.isPending} className="btn-primary disabled:opacity-50">
+                <Button type="button" variant="secondary" onClick={handleCloseModal}>
+                  Cancelar
+                </Button>
+                <Button 
+                  type="submit" 
+                  variant="default" 
+                  className="bg-amber-400 text-slate-900 hover:bg-amber-400/90"
+                  disabled={isSubmitting || createCitaMutation.isPending}
+                >
                   {isSubmitting || createCitaMutation.isPending ? "Enviando..." : "Confirmar Cita"}
-                </button>
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>

@@ -1,171 +1,327 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { useForm, type SubmitHandler } from 'react-hook-form';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { useAuthStore } from '../store/authStore';
+import { useForm, type SubmitHandler, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useAuthStore } from '../store/authStore';
+import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { FaSpinner } from 'react-icons/fa';
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
-const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
-const ACCEPTED_DOC_TYPES = ["application/pdf"];
+import { InfoDialog } from '../components/ui/InfoDialog';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Textarea } from '../components/ui/textarea';
+import { Label } from '../components/ui/label';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '../components/ui/select';
 
-const fileSchema = (types: string[]) =>
-  z.instanceof(FileList)
-    .refine(files => files.length === 1, "Este campo es requerido.")
-    .refine(files => files.length > 0 && files[0].size <= MAX_FILE_SIZE, "El archivo no puede pesar más de 5MB.")
-    .refine(files => files.length > 0 && types.includes(files[0].type), "Formato de archivo no soportado.");
+const OFICIOS_LISTA = [
+  "Gasfitería", "Electricidad", "Pintura", "Albañilería", "Carpintería",
+  "Jardinería", "Mecánica", "Plomería", "Cerrajería", 
+  "Reparación de Electrodomésticos", "Instalación de Aire Acondicionado",
+  "Servicios de Limpieza", "Techado", "Otro"
+];
 
-const postulacionSchema = z.object({
-  categoria: z.string().min(1, "Debes seleccionar una categoría"),
-  anos_experiencia: z.coerce.number().min(0, "Debe ser un número positivo").max(50, "No puedes tener más de 50 años de experiencia"),
-  comunas_cobertura: z.string().min(1, "Indica al menos una comuna"),
-  resumen_profesional: z.string().min(50, "El resumen debe tener al menos 50 caracteres"),
-  foto_carnet_frente: fileSchema(ACCEPTED_IMAGE_TYPES),
-  foto_carnet_reverso: fileSchema(ACCEPTED_IMAGE_TYPES),
-  certificado_antecedentes: fileSchema(ACCEPTED_DOC_TYPES),
+const applicationSchema = z.object({
+  nombres: z.string().min(1, "El nombre es requerido"),
+  primer_apellido: z.string().min(1, "El apellido es requerido"),
+  segundo_apellido: z.string().optional(),
+  direccion: z.string().min(1, "La dirección es requerida"),
+  telefono: z.string().optional(),
+  oficio: z.string().min(1, "Debes seleccionar un oficio"),
+  bio: z.string().min(50, "Tu biografía debe tener al menos 50 caracteres"),
+  
+  archivos_portafolio: z.instanceof(FileList)
+    .refine((files) => files.length > 0, "Debes subir al menos una imagen para tu portafolio.")
+    .refine((files) => Array.from(files).every(file => file.size <= 5 * 1024 * 1024), "Cada archivo no debe superar los 5MB."),
+    
+  archivos_certificados: z.instanceof(FileList)
+    .refine((files) => files.length > 0, "Debes subir al menos un certificado.")
+    .refine((files) => Array.from(files).every(file => file.size <= 5 * 1024 * 1024), "Cada archivo no debe superar los 5MB."),
 });
 
-type PostulacionFormInputs = z.infer<typeof postulacionSchema>;
+type ApplicationFormInputs = z.infer<typeof applicationSchema>;
+
+interface UserProfile {
+  nombres: string;
+  primer_apellido: string;
+  segundo_apellido: string | null;
+  direccion: string | null;
+  telefono: string | null;
+}
+
+const fetchUserProfile = async (token: string | null): Promise<UserProfile> => {
+  if (!token) throw new Error("No autenticado");
+  const { data } = await axios.get('/api/profile/me', { 
+    headers: { Authorization: `Bearer ${token}` } 
+  });
+  return data;
+};
+
+const sendPostulacion = async ({ formData, token }: { formData: FormData, token: string | null }) => {
+  if (!token) throw new Error("No autenticado");
+  const { data } = await axios.post('/api/postulaciones', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+      Authorization: `Bearer ${token}`
+    }
+  });
+  return data;
+};
 
 export default function ProviderApplicationPage() {
-  const [serverError, setServerError] = useState<string | null>(null);
-  const navigate = useNavigate();
   const token = useAuthStore((state) => state.token);
-
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm({
-    resolver: zodResolver(postulacionSchema),
+  const navigate = useNavigate();
+  
+  const [modalInfo, setModalInfo] = useState<{ isOpen: boolean; title: string; description: string; type: 'success' | 'error' }>({
+    isOpen: false,
+    title: '',
+    description: '',
+    type: 'success',
   });
 
-  const onSubmit: SubmitHandler<PostulacionFormInputs> = async (data) => {
-    setServerError(null);
+  const { register, handleSubmit, control, watch, reset, formState: { errors } } = useForm<ApplicationFormInputs>({
+    resolver: zodResolver(applicationSchema),
+    defaultValues: {
+      nombres: "",
+      primer_apellido: "",
+      segundo_apellido: "",
+      direccion: "",
+      telefono: "",
+      bio: "",
+    }
+  });
+  
+  const { data: profile, isLoading: isLoadingProfile } = useQuery({
+    queryKey: ['userProfile'],
+    queryFn: () => fetchUserProfile(token),
+    enabled: !!token,
+  });
 
-    const formData = new FormData();
-    formData.append('categoria', data.categoria);
-    formData.append('anos_experiencia', String(data.anos_experiencia));
-    formData.append('comunas_cobertura', data.comunas_cobertura);
-    formData.append('resumen_profesional', data.resumen_profesional);
-    formData.append('foto_carnet_frente', data.foto_carnet_frente[0]);
-    formData.append('foto_carnet_reverso', data.foto_carnet_reverso[0]);
-    formData.append('certificado_antecedentes', data.certificado_antecedentes[0]);
-
-    try {
-      await axios.post(`/api/postulaciones`, formData, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data',
-        }
+  useEffect(() => {
+    if (profile) {
+      reset({
+        nombres: profile.nombres || '',
+        primer_apellido: profile.primer_apellido || '',
+        segundo_apellido: profile.segundo_apellido || '',
+        direccion: profile.direccion || '',
+        telefono: profile.telefono || '',
       });
+    }
+  }, [profile, reset]);
 
-      navigate('/perfil?postulacion=exitosa');
+  const portfolioFiles = watch("archivos_portafolio");
+  const certificateFiles = watch("archivos_certificados");
 
-    } catch (err: unknown) {
-      let message = "Ocurrió un error al enviar tu postulación. Revisa los archivos e intenta de nuevo.";
-      if (axios.isAxiosError(err) && err.response?.status === 422) {
-        message = "Los archivos enviados no son válidos o están corruptos.";
-      }
-      setServerError(message);
+  const mutation = useMutation({
+    mutationFn: sendPostulacion,
+    onSuccess: (data) => {
+      setModalInfo({
+        isOpen: true,
+        title: '¡Postulación Enviada!',
+        description: `Tu postulación ha sido enviada con éxito. Estado actual: ${data.statusPostulacion}. Serás notificado cuando sea revisada.`,
+        type: 'success',
+      });
+    },
+    onError: (err) => {
+      console.error(err);
+      setModalInfo({
+        isOpen: true,
+        title: 'Error al Enviar',
+        description: 'No se pudo enviar tu postulación. Por favor, revisa los campos e intenta de nuevo.',
+        type: 'error',
+      });
+    }
+  });
+  
+  const handleCloseModal = () => {
+    setModalInfo({ ...modalInfo, isOpen: false });
+    if (modalInfo.type === 'success') {
+      navigate('/perfil');
     }
   };
 
-  const InputError = ({ message }: { message?: string }) =>
-    message ? <p className="mt-1 text-sm text-red-400">{message}</p> : null;
+  const onSubmit: SubmitHandler<ApplicationFormInputs> = (data) => {
+    const formData = new FormData();
+    formData.append('nombres', data.nombres);
+    formData.append('primer_apellido', data.primer_apellido);
+    if (data.segundo_apellido) formData.append('segundo_apellido', data.segundo_apellido);
+    formData.append('direccion', data.direccion);
+    if (data.telefono) formData.append('telefono', data.telefono);
+    formData.append('oficio', data.oficio);
+    formData.append('bio', data.bio);
 
-  const getBorderClass = (fieldName: keyof PostulacionFormInputs) =>
-    errors[fieldName] ? 'border-red-500' : 'border-slate-700';
+    Array.from(data.archivos_portafolio).forEach(file => {
+      formData.append('archivos_portafolio', file);
+    });
+    Array.from(data.archivos_certificados).forEach(file => {
+      formData.append('archivos_certificados', file);
+    });
+
+    mutation.mutate({ formData, token });
+  };
+  
+  const InputError = ({ message }: { message?: string }) => 
+    message ? <p className="mt-1 text-sm text-red-400">{message}</p> : null;
+    
+  const getFileLabel = (files: FileList | undefined) => {
+    if (!files || files.length === 0) {
+      return "Ningún archivo seleccionado";
+    }
+    if (files.length === 1) {
+      return files[0].name;
+    }
+    return `${files.length} archivos seleccionados`;
+  };
+
+  if (isLoadingProfile) {
+    return (
+      <div className="flex justify-center items-center min-h-[50vh]">
+        <FaSpinner className="animate-spin text-amber-400 text-4xl" />
+      </div>
+    );
+  }
 
   return (
-    <div className="flex justify-center items-start min-h-screen p-4 sm:p-8 bg-slate-900">
-      <div className="w-full max-w-2xl">
-        <h1 className="text-4xl font-bold text-white font-poppins mb-4 text-center [text-shadow:0_0_15px_rgba(34,211,238,0.4)]">
-          Postular como Agente
-        </h1>
+    <>
+      <InfoDialog
+        isOpen={modalInfo.isOpen}
+        onClose={handleCloseModal}
+        title={modalInfo.title}
+        description={modalInfo.description}
+        type={modalInfo.type}
+      />
 
-        <p className="text-center text-sm text-slate-300 mb-6">
-          Completa tu perfil profesional. <span className="text-cyan-400">*</span> Campos obligatorios
-        </p>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="bg-slate-800/50 border border-slate-700 rounded-lg p-6 sm:p-8 space-y-6 backdrop-blur-sm shadow-lg">
-
-          <fieldset className="space-y-4">
-            <legend className="text-lg font-semibold text-white">Información Profesional</legend>
-
-            <div>
-              <label htmlFor="categoria" className="block text-sm font-medium text-slate-300">Categoría Principal *</label>
-              <select id="categoria" {...register("categoria")}
-                className={`mt-1 block w-full input-base rounded-md bg-slate-800 text-white p-3 border ${getBorderClass('categoria')} focus:border-cyan-400 focus:ring focus:ring-cyan-400/30`}>
-                <option value="">Selecciona tu especialidad</option>
-                <option value="plomeria">Plomería (Gasfitería)</option>
-                <option value="electricidad">Electricidad</option>
-                <option value="carpinteria">Carpintería</option>
-                <option value="pintura">Pintura</option>
-                <option value="albanileria">Albañilería</option>
-              </select>
-              <InputError message={errors.categoria?.message} />
+      <div className="p-4 sm:p-8">
+        <div className="mx-auto max-w-2xl">
+          <h1 className="text-4xl font-bold text-white font-poppins mb-8 text-center [text-shadow:0_0_15px_rgba(234,179,8,0.4)]">
+            Postula para ser Prestador
+          </h1>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <Label htmlFor="nombres">Nombres</Label>
+                <Input type="text" id="nombres" {...register("nombres")} className={errors.nombres ? 'border-red-500' : ''} />
+                <InputError message={errors.nombres?.message} />
+              </div>
+              <div>
+                <Label htmlFor="primer_apellido">Primer Apellido</Label>
+                <Input type="text" id="primer_apellido" {...register("primer_apellido")} className={errors.primer_apellido ? 'border-red-500' : ''} />
+                <InputError message={errors.primer_apellido?.message} />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <Label htmlFor="segundo_apellido">Segundo Apellido (Opcional)</Label>
+                <Input type="text" id="segundo_apellido" {...register("segundo_apellido")} />
+              </div>
+              <div>
+                <Label htmlFor="telefono">Teléfono (Opcional)</Label>
+                <Input type="tel" id="telefono" {...register("telefono")} />
+              </div>
             </div>
 
             <div>
-              <label htmlFor="anos_experiencia" className="block text-sm font-medium text-slate-300">Años de Experiencia *</label>
-              <input type="number" id="anos_experiencia" {...register("anos_experiencia")}
-                className={`mt-1 block w-full input-base rounded-md bg-slate-800 text-white p-3 border ${getBorderClass('anos_experiencia')} focus:border-cyan-400 focus:ring focus:ring-cyan-400/30`} />
-              <InputError message={errors.anos_experiencia?.message} />
+              <Label htmlFor="direccion">Dirección</Label>
+              <Input type="text" id="direccion" {...register("direccion")} className={errors.direccion ? 'border-red-500' : ''} />
+              <InputError message={errors.direccion?.message} />
             </div>
 
             <div>
-              <label htmlFor="comunas_cobertura" className="block text-sm font-medium text-slate-300">Comunas de Cobertura *</label>
-              <input type="text" id="comunas_cobertura" {...register("comunas_cobertura")}
-                placeholder="Ej: Las Condes, Providencia, Santiago"
-                className={`mt-1 block w-full input-base rounded-md bg-slate-800 text-white p-3 border ${getBorderClass('comunas_cobertura')} focus:border-cyan-400 focus:ring focus:ring-cyan-400/30`} />
-              <InputError message={errors.comunas_cobertura?.message} />
+              <Label htmlFor="oficio">Oficio Principal</Label>
+              <Controller
+                name="oficio"
+                control={control}
+                render={({ field }) => (
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <SelectTrigger className={errors.oficio ? 'border-red-500' : ''}>
+                      <SelectValue placeholder="Selecciona tu especialidad principal..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {OFICIOS_LISTA.map((oficio) => (
+                        <SelectItem key={oficio} value={oficio}>{oficio}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              <InputError message={errors.oficio?.message} />
             </div>
 
             <div>
-              <label htmlFor="resumen_profesional" className="block text-sm font-medium text-slate-300">Resumen Profesional *</label>
-              <textarea id="resumen_profesional" rows={4} {...register("resumen_profesional")}
-                placeholder="Habla sobre ti, tu experiencia y lo que te destaca. (Mín. 50 caracteres)"
-                className={`mt-1 block w-full input-base rounded-md bg-slate-800 text-white p-3 border ${getBorderClass('resumen_profesional')} focus:border-cyan-400 focus:ring focus:ring-cyan-400/30`} />
-              <InputError message={errors.resumen_profesional?.message} />
-            </div>
-          </fieldset>
-
-          <fieldset className="space-y-4">
-            <legend className="text-lg font-semibold text-white">Documentación de Identidad</legend>
-
-            <div>
-              <label htmlFor="foto_carnet_frente" className="block text-sm font-medium text-slate-300">Cédula de Identidad (Frente) *</label>
-              <input type="file" id="foto_carnet_frente" accept={ACCEPTED_IMAGE_TYPES.join(',')} {...register("foto_carnet_frente")}
-                className={`mt-1 block w-full text-slate-300 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-cyan-500 file:text-white hover:file:bg-cyan-400 ${getBorderClass('foto_carnet_frente')}`} />
-              <InputError message={errors.foto_carnet_frente?.message} />
+              <Label htmlFor="bio">Biografía (mín. 50 caracteres)</Label>
+              <Textarea id="bio" rows={4} {...register("bio")} className={errors.bio ? 'border-red-500' : ''} placeholder="Habla sobre ti, tu experiencia..." />
+              <InputError message={errors.bio?.message} />
             </div>
 
             <div>
-              <label htmlFor="foto_carnet_reverso" className="block text-sm font-medium text-slate-300">Cédula de Identidad (Reverso) *</label>
-              <input type="file" id="foto_carnet_reverso" accept={ACCEPTED_IMAGE_TYPES.join(',')} {...register("foto_carnet_reverso")}
-                className={`mt-1 block w-full text-slate-300 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-cyan-500 file:text-white hover:file:bg-cyan-400 ${getBorderClass('foto_carnet_reverso')}`} />
-              <InputError message={errors.foto_carnet_reverso?.message} />
+              <Label>Portafolio (Imágenes de trabajos)</Label>
+              <label 
+                htmlFor="archivos_portafolio" 
+                className={`flex h-10 w-full items-center rounded-md border border-slate-700 bg-slate-900/50 px-3 text-sm text-slate-100 ${errors.archivos_portafolio ? 'border-red-500' : ''} cursor-pointer`}
+              >
+                <span className="rounded-md bg-amber-400 text-slate-900 hover:bg-amber-400/90 px-4 py-1.5 text-sm font-semibold cursor-pointer">
+                  Elegir archivos
+                </span>
+                <span className="ml-3 text-sm text-slate-400 truncate">
+                  {getFileLabel(portfolioFiles)}
+                </span>
+              </label>
+              <Input 
+                type="file" 
+                id="archivos_portafolio" 
+                {...register("archivos_portafolio")} 
+                multiple 
+                accept="image/*" 
+                className="hidden"
+              />
+              <InputError message={errors.archivos_portafolio?.message} />
+            </div>
+            
+            <div>
+              <Label>Certificados (PDF o Imágenes)</Label>
+              <label 
+                htmlFor="archivos_certificados" 
+                className={`flex h-10 w-full items-center rounded-md border border-slate-700 bg-slate-900/50 px-3 text-sm text-slate-100 ${errors.archivos_certificados ? 'border-red-500' : ''} cursor-pointer`}
+              >
+                <span className="rounded-md bg-amber-400 text-slate-900 hover:bg-amber-400/90 px-4 py-1.5 text-sm font-semibold cursor-pointer">
+                  Elegir archivos
+                </span>
+                <span className="ml-3 text-sm text-slate-400 truncate">
+                  {getFileLabel(certificateFiles)}
+                </span>
+              </label>
+              <Input 
+                type="file" 
+                id="archivos_certificados" 
+                {...register("archivos_certificados")} 
+                multiple 
+                accept="image/*,application/pdf" 
+                className="hidden"
+              />
+              <InputError message={errors.archivos_certificados?.message} />
             </div>
 
             <div>
-              <label htmlFor="certificado_antecedentes" className="block text-sm font-medium text-slate-300">Certificado de Antecedentes (PDF) *</label>
-              <input type="file" id="certificado_antecedentes" accept={ACCEPTED_DOC_TYPES.join(',')} {...register("certificado_antecedentes")}
-                className={`mt-1 block w-full text-slate-300 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-cyan-500 file:text-white hover:file:bg-cyan-400 ${getBorderClass('certificado_antecedentes')}`} />
-              <InputError message={errors.certificado_antecedentes?.message} />
+              <Button 
+                type="submit" 
+                disabled={mutation.isPending} 
+                className="w-full bg-amber-400 text-slate-900 hover:bg-amber-400/90"
+              >
+                {mutation.isPending ? "Enviando Postulación..." : "Enviar Postulación"}
+              </Button>
             </div>
-          </fieldset>
-
-          {serverError && (
-            <div className="text-center text-red-400 text-sm">{serverError}</div>
-          )}
-
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full flex justify-center py-3 px-4 rounded-md text-base font-medium text-white bg-cyan-500 hover:bg-cyan-400 transition-colors disabled:opacity-50"
-          >
-            {isSubmitting ? "Enviando Postulación..." : "Enviar Postulación"}
-          </button>
-        </form>
+          </form>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
