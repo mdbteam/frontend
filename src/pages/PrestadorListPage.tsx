@@ -15,18 +15,16 @@ interface Prestador {
   puntuacion: number | null;
 }
 
-// --- ¡NUEVA FUNCIÓN DE PARCHE! ---
 const normalizeString = (str: string | null) => {
   if (!str) return null;
   return str
     .toLowerCase()
-    .normalize("NFD") // Separa las tildes
-    .replace(/[\u0300-\u036f]/g, ""); // Quita las tildes
+    .normalize("NFD") 
+    .replace(/[\u0300-\u036f]/g, "");
 };
 
-const fetchPrestadores = async (oficio: string | null, searchTerm: string) => {
-  // Aplicamos el parche ANTES de enviar
-  const categoriaNormalizada = normalizeString(oficio);
+const fetchPrestadores = async (categoria: string | null, searchTerm: string) => {
+  const categoriaNormalizada = normalizeString(categoria);
   
   const { data } = await axios.get<Prestador[]>('/api/prestadores', {
     params: {
@@ -39,18 +37,22 @@ const fetchPrestadores = async (oficio: string | null, searchTerm: string) => {
 
 export default function PrestadorListPage() {
   const [searchParams] = useSearchParams();
-  const oficioFromUrl = searchParams.get('oficio');
+  
+  // --- ¡AQUÍ ESTÁ LA CORRECCIÓN! ---
+  // Leemos "categoria" (lo que envía el Chatbot y el Home)
+  const categoriaFromUrl = searchParams.get('categoria'); 
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [oficioFilter, setOficioFilter] = useState(oficioFromUrl || null);
+  const [categoriaFilter, setCategoriaFilter] = useState(categoriaFromUrl || null);
 
   useEffect(() => {
-    setOficioFilter(searchParams.get('oficio'));
+    // Sincronizamos si la URL cambia
+    setCategoriaFilter(searchParams.get('categoria')); 
   }, [searchParams]);
 
   const { data: prestadores, isLoading, error } = useQuery({
-    queryKey: ['prestadores', oficioFilter, searchTerm],
-    queryFn: () => fetchPrestadores(oficioFilter, searchTerm),
+    queryKey: ['prestadores', categoriaFilter, searchTerm],
+    queryFn: () => fetchPrestadores(categoriaFilter, searchTerm),
   });
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -81,9 +83,9 @@ export default function PrestadorListPage() {
               </div>
             </div>
             
-            {oficioFilter && (
+            {categoriaFilter && (
               <p className="mt-3 text-sm text-slate-400">
-                Filtrando por: <span className="font-semibold text-amber-400">{oficioFilter}</span>
+                Filtrando por: <span className="font-semibold text-amber-400">{categoriaFilter}</span>
               </p>
             )}
           </div>
