@@ -8,7 +8,6 @@ import { z } from 'zod';
 import { useState } from 'react';
 import { Button } from '../ui/button';
 
-// 1. LISTA DE OFICIOS (basada en el backend)
 const OFICIOS_LISTA = [
   "Gasfitería",
   "Electricidad",
@@ -26,7 +25,6 @@ const OFICIOS_LISTA = [
   "Otro"
 ];
 
-// 2. Tipos actualizados (cargo -> especialidad)
 interface ExperienciaResponse {
   id_experiencia: number;
   id_usuario: number;
@@ -45,7 +43,6 @@ const experienceSchema = z.object({
 
 type ExperienceFormInputs = z.infer<typeof experienceSchema>;
 
-// 3. Funciones de API (actualizadas)
 const fetchMyExperience = async (token: string | null) => {
   if (!token) throw new Error("No autenticado");
   const { data } = await axios.get<ExperienciaResponse[]>('/api/profile/me/experience', {
@@ -62,7 +59,6 @@ const addExperience = async ({ payload, token }: { payload: ExperienceFormInputs
   return data;
 };
 
-// 4. Componente de Formulario (actualizado)
 function AddExperienceForm({ onFormSubmit }: { onFormSubmit: () => void }) {
   const { token } = useAuthStore();
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -144,7 +140,6 @@ function AddExperienceForm({ onFormSubmit }: { onFormSubmit: () => void }) {
   );
 }
 
-// 6. Componente Principal de la Pestaña (actualizado)
 export function MyExperienceTab() {
   const { token } = useAuthStore();
   const queryClient = useQueryClient();
@@ -195,7 +190,7 @@ export function MyExperienceTab() {
                   <p className="text-sm text-slate-300 mt-1">{exp.descripcion}</p>
                   <p className="text-xs text-slate-400 mt-2">
                     {new Date(exp.fecha_inicio).toLocaleDateString('es-CL')} - {exp.fecha_fin ? new Date(exp.fecha_fin).toLocaleDateString('es-CL') : 'Presente'}
-                  {/* --- ¡AQUÍ ESTÁ LA CORRECCIÓN! --- */}
+
                   </p>
                 </div>
                 <button 
