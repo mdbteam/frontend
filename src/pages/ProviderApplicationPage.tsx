@@ -75,6 +75,10 @@ const sendPostulacion = async ({ formData, token }: { formData: FormData, token:
   return data;
 };
 
+// --- CORRECCIÓN: Componente movido fuera del render principal ---
+const InputError = ({ message }: { message?: string }) => 
+  message ? <p className="mt-1 text-sm text-red-400">{message}</p> : null;
+
 export default function ProviderApplicationPage() {
   const token = useAuthStore((state) => state.token);
   const navigate = useNavigate();
@@ -157,18 +161,16 @@ export default function ProviderApplicationPage() {
     formData.append('oficio', data.oficio);
     formData.append('bio', data.bio);
 
-    Array.from(data.archivos_portafolio).forEach(file => {
+    // --- CORRECCIÓN: Bucle for...of en lugar de forEach ---
+    for (const file of Array.from(data.archivos_portafolio)) {
       formData.append('archivos_portafolio', file);
-    });
-    Array.from(data.archivos_certificados).forEach(file => {
+    }
+    for (const file of Array.from(data.archivos_certificados)) {
       formData.append('archivos_certificados', file);
-    });
+    }
 
     mutation.mutate({ formData, token });
   };
-  
-  const InputError = ({ message }: { message?: string }) => 
-    message ? <p className="mt-1 text-sm text-red-400">{message}</p> : null;
     
   const getFileLabel = (files: FileList | undefined) => {
     if (!files || files.length === 0) {

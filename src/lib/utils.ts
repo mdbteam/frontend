@@ -34,3 +34,46 @@ export const buttonVariants = cva(
     },
   }
 )
+
+
+export function validateRut(rut: string): boolean {
+  if (!rut || rut.trim().length < 3) return false;
+  
+  const cleanRut = rut.replace(/[^0-9kK]/g, '').toUpperCase();
+  if (cleanRut.length < 2) return false;
+
+  const body = cleanRut.slice(0, -1);
+  const dv = cleanRut.slice(-1);
+
+  if (!/^[0-9]+$/.test(body)) return false;
+
+  let sum = 0;
+  let multiplier = 2;
+
+  for (let i = body.length - 1; i >= 0; i--) {
+    sum += parseInt(body.charAt(i), 10) * multiplier;
+    multiplier = multiplier === 7 ? 2 : multiplier + 1;
+  }
+
+  const mod = 11 - (sum % 11);
+  let expectedDV = mod.toString();
+
+  if (mod === 11) expectedDV = '0';
+  if (mod === 10) expectedDV = 'K';
+
+  return expectedDV === dv;
+}
+
+export function formatRut(value: string): string {
+  const cleanValue = value.replace(/[^0-9kK]/g, '').toUpperCase();
+  const len = cleanValue.length;
+
+  if (len <= 1) return cleanValue;
+
+  const dv = cleanValue.substring(len - 1);
+  let body = cleanValue.substring(0, len - 1);
+
+  body = body.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
+  return `${body}-${dv}`;
+}
