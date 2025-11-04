@@ -19,23 +19,7 @@ export function HeroSection() {
            Buscamos impulsar el talento con tecnología y comunidad.
            "Conecta, Colabora y Crece"
         </p>
-
-        <div className="mx-auto max-w-lg">
-          <form className="flex items-center gap-2">
-            <input
-              type="text"
-              placeholder="Buscar por categoría o nombre de agente..."
-              required
-              className="flex-grow rounded-lg border border-slate-700 bg-slate-800 p-3 text-base text-white focus:border-yellow-400 focus:ring-yellow-400"
-            />
-            <button
-              type="submit"
-              className="rounded-lg bg-yellow-400 px-6 py-3 text-base font-bold text-slate-900 hover:bg-yellow-300 focus:outline-none focus:ring-4 focus:ring-yellow-400/50 transition-colors"
-            >
-              Buscar
-            </button>
-          </form>
-        </div>
+        
       </div>
     </section>
   );

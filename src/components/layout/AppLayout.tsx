@@ -1,5 +1,5 @@
 import { Outlet } from 'react-router-dom';
-import { AppNavbar } from './Navbar'; 
+import AppNavbar  from './Navbar'; 
 import { AppFooter } from './AppFooter';
 import  {Chatbot}  from '../chatbot/Chatbot';
 

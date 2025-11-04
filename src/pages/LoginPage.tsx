@@ -1,114 +1,143 @@
+import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import axios, { type AxiosError } from 'axios';
+import { useAuthStore } from '../store/authStore';
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import { useForm, type SubmitHandler } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 
-import { Link } from 'react-router-dom';
+// --- (Tu interfaz de error, traída de vuelta) ---
+interface ErrorResponse {
+  message?: string;
+  detail?: string | { msg: string }[];
+}
 
-// Componente de ícono para los campos del formulario
-const InputIcon = ({ children }: { children: React.ReactNode }) => (
-  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-    {children}
-  </div>
-);
+// --- (Tu función de error, traída de vuelta) ---
+function getLoginErrorMessage(err: unknown): string {
+  console.error('Error de login:', err); // <-- ¡AQUÍ SE USA 'err'!
+  if (!axios.isAxiosError(err)) return 'Ocurrió un error inesperado.';
+  const { response } = err as AxiosError<ErrorResponse>;
+  if (!response) return 'Ocurrió un error de red o de respuesta.';
+  const { status, data } = response;
+  if (status === 422 && data.detail && Array.isArray(data.detail)) return data.detail[0].msg;
+  if (data?.detail && typeof data.detail === 'string') return data.detail;
+  if (status === 401) return 'Correo o contraseña incorrectos.';
+  return 'Ocurrió un error. Intenta de nuevo.';
+}
 
-function LoginPage() {
+const loginSchema = z.object({
+  correo: z.string()
+    .min(1, "El correo es requerido")
+    .email("El formato del correo no es válido"),
+  password: z.string()
+    .min(1, "La contraseña es requerida")
+});
+
+type LoginFormInputs = z.infer<typeof loginSchema>;
+
+export default function LoginPage() {
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  
+  const login = useAuthStore((state) => state.login);
+  const navigate = useNavigate();
+
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginFormInputs>({
+    resolver: zodResolver(loginSchema),
+  });
+
+  const onSubmit: SubmitHandler<LoginFormInputs> = async (data) => {
+    setServerError(null); 
+    try {
+      const formData = new FormData();
+      formData.append('username', data.correo);
+      formData.append('password', data.password);
+      
+      const response = await axios.post(`/api/auth/login`, formData);
+      
+      const { token, usuario } = response.data;
+      login(token, usuario);
+      navigate('/');
+    } catch (err: unknown) { 
+      // --- (CORRECCIÓN: Usamos la función de error) ---
+      const errorMessage = getLoginErrorMessage(err);
+      setServerError(errorMessage);
+    }
+  };
+
   return (
-    <div className="flex min-h-full flex-col items-center justify-center bg-gray-100 p-4">
-      <div className="w-full max-w-md space-y-8">
-        {/* Encabezado */}
-        <div className="text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-            Iniciar Sesión
-          </h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Bienvenido de nuevo a la red Chambee.
-          </p>
-        </div>
+    <div className="flex min-h-screen items-center justify-center p-4">
+      <div className="w-full max-w-md rounded-lg bg-slate-800/50 p-8 border border-slate-700 backdrop-blur-sm">
+        <h2 className="text-3xl font-bold text-center text-white font-poppins mb-6">
+          Iniciar Sesión
+        </h2>
+        
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-slate-300">
+              Correo Electrónico
+            </label>
+            <input
+              id="email"
+              type="email"
+              {...register("correo")}
+              className={`mt-1 block w-full px-3 py-2 bg-slate-900 border ${errors.correo ? 'border-red-500' : 'border-slate-700'} rounded-md text-white shadow-sm focus:outline-none focus:ring-cyan-500 focus:border-cyan-500`}
+            />
+            {errors.correo && (
+              <p className="mt-1 text-sm text-red-400">{errors.correo.message}</p>
+            )}
+          </div>
 
-        {/* Formulario */}
-        <div className="rounded-lg bg-white p-8 shadow-lg border border-gray-200">
-          <form className="space-y-6">
-            {/* Campo de Correo Electrónico */}
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Correo Electrónico
-              </label>
-              <div className="relative mt-1">
-                <InputIcon>
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" /></svg>
-                </InputIcon>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  className="block w-full rounded-md border-gray-300 pl-10 shadow-sm transition duration-200 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/50"
-                  placeholder="tu@correo.cl"
-                />
-              </div>
-            </div>
-
-            {/* Campo de Contraseña */}
-            <div>
-              <label htmlFor="password"className="block text-sm font-medium text-gray-700">
-                Contraseña
-              </label>
-              <div className="relative mt-1">
-                <InputIcon>
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                </InputIcon>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  className="block w-full rounded-md border-gray-300 pl-10 shadow-sm transition duration-200 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/50"
-                  placeholder="••••••••"
-                />
-              </div>
-            </div>
-
-            {/* Opciones Adicionales */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input
-                  id="remember-me"
-                  name="remember-me"
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"
-                />
-                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
-                  Recordarme
-                </label>
-              </div>
-              <div className="text-sm">
-                <a href="#" className="font-medium text-cyan-600 hover:text-cyan-500">
-                  ¿Olvidaste tu contraseña?
-                </a>
-              </div>
-            </div>
-
-            {/* Botón de Envío */}
-            <div>
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-slate-300">
+              Contraseña
+            </label>
+            <div className="relative mt-1">
+              <input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                {...register("password")}
+                className={`block w-full px-3 py-2 bg-slate-900 border ${errors.password ? 'border-red-500' : 'border-slate-700'} rounded-md text-white shadow-sm focus:outline-none focus:ring-cyan-500 focus:border-cyan-500 pr-10`}
+              />
               <button
-                type="submit"
-                className="flex w-full justify-center rounded-md border border-transparent bg-cyan-600 py-3 px-4 text-sm font-medium text-white shadow-lg transition-all duration-300 hover:bg-cyan-700 focus:outline-none focus:ring-4 focus:ring-cyan-500/50 transform hover:scale-105"
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-white"
+                aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
               >
-                Ingresar
+                {showPassword ? <FaEyeSlash /> : <FaEye />}
               </button>
             </div>
-          </form>
-        </div>
+            {errors.password && (
+              <p className="mt-1 text-sm text-red-400">{errors.password.message}</p>
+            )}
+          </div>
 
-        {/* Enlace de Registro */}
-        <p className="text-center text-sm text-gray-600">
-          ¿No eres miembro?{' '}
-          <Link to="/registro" className="font-medium text-cyan-600 hover:text-cyan-500">
-            ¡Regístrate aquí!
+          {serverError && (
+            <div className="text-center text-red-400 text-sm">
+              {serverError}
+            </div>
+          )}
+
+          <div>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-slate-900 bg-yellow-400 hover:bg-yellow-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-colors disabled:opacity-50"
+            >
+              {isSubmitting ? "Entrando..." : "Entrar"}
+            </button>
+          </div>
+        </form>
+
+        <p className="mt-6 text-center text-sm text-slate-400">
+          ¿No tienes una cuenta?{' '}
+          <Link to="/registro" className="font-medium text-cyan-400 hover:text-cyan-300">
+            Regístrate aquí
           </Link>
         </p>
       </div>
     </div>
   );
 }
-
-export default LoginPage;

@@ -1,113 +1,217 @@
+import { NavLink, Link, useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../../store/authStore';
+import { FaBars, FaTimes } from 'react-icons/fa';
+import { User, LogOut, Calendar, UserCheck, FileText } from 'lucide-react'; 
 import { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '../ui/dropdown-menu';
 
-export function AppNavbar() {
+const MobileNavLink: React.FC<{ to: string, children: React.ReactNode, onClick: () => void }> = ({ to, children, onClick }) => (
+  <NavLink
+    to={to}
+    className={({ isActive }) =>
+      `block px-3 py-2 rounded-md text-base font-medium ${
+        isActive ? 'bg-amber-500 text-slate-900' : 'text-slate-300 hover:bg-slate-700 hover:text-white'
+      }`
+    }
+    onClick={onClick}
+  >
+    {children}
+  </NavLink>
+);
+
+const DesktopNavLink: React.FC<{ to: string, children: React.ReactNode }> = ({ to, children }) => (
+  <NavLink
+    to={to}
+    className={({ isActive }) =>
+      `px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+        isActive ? 'text-amber-400' : 'text-slate-300 hover:bg-slate-700 hover:text-white'
+      }`
+    }
+  >
+    {children}
+  </NavLink>
+);
+
+const UserAvatar: React.FC<{ user: { foto_url?: string | null, nombres?: string | null } | null }> = ({ user }) => {
+  const fallbackInitial = user?.nombres ? user.nombres.charAt(0).toUpperCase() : <User size={18} />;
+  
+  return (
+    <div className="h-8 w-8 rounded-full bg-slate-700 flex items-center justify-center text-slate-300 font-medium overflow-hidden">
+      {user?.foto_url ? (
+        <img src={user.foto_url} alt="Perfil" className="h-full w-full object-cover" />
+      ) : (
+        <span>{fallbackInitial}</span>
+      )}
+    </div>
+  );
+};
+
+
+export default function AppNavbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const { isAuthenticated, user, logout } = useAuthStore();
+  const navigate = useNavigate();
+  console.log("ROL ACTUAL:", user?.rol);
+  const handleLogout = () => {
+    logout();
+    setIsOpen(false);
+    navigate('/');
+  };
 
-  const getNavLinkClass = ({ isActive }: { isActive: boolean }) =>
-    isActive ? 'text-cyan-400 font-semibold' : 'text-slate-300 hover:text-cyan-400';
+  const closeMenu = () => setIsOpen(false);
 
-  const getMobileNavLinkClass = ({ isActive }: { isActive: boolean }) =>
-    `block px-3 py-2 rounded-md text-base font-medium ${
-      isActive ? 'bg-slate-700 text-white' : 'text-slate-300 hover:bg-slate-700 hover:text-white'
-    }`;
+  const esAdmin = isAuthenticated && user && user.rol.toLowerCase().trim() === 'administrador';
+  const esPrestador = isAuthenticated && user && user.rol.toLowerCase().trim() === 'prestador';
+  const esCliente = isAuthenticated && user && user.rol.toLowerCase().trim() === 'cliente';
+
 
   return (
-    <header className="bg-slate-900/80 backdrop-blur-sm border-b border-slate-800 sticky top-0 z-50">
-      <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+    <nav className="bg-slate-800/80 backdrop-blur-md shadow-md sticky top-0 z-40 border-b border-slate-700">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="flex h-16 items-center justify-between">
+          
+          {/* Logo */}
           <div className="flex-shrink-0">
-            <NavLink to="/" className="text-2xl font-bold text-white font-poppins">
-              Chambee
-            </NavLink>
+            <Link to="/" className="text-2xl font-bold text-amber-400 font-poppins">
+              Cham<span className="text-white">Bee</span>
+            </Link>
           </div>
 
-          {/* --- Menú de Escritorio --- */}
+          {/* Links de Escritorio */}
           <div className="hidden md:block">
-            <div className="ml-10 flex items-center space-x-6">
-              <NavLink to="/" className={getNavLinkClass}>
-                Inicio
-              </NavLink>
-              <NavLink to="/prestadores" className={getNavLinkClass}>
-                Buscar Agentes
-              </NavLink>
-              <NavLink to="/postular" className={getNavLinkClass}>
-                Postular
-              </NavLink>
-              <NavLink to="/administrador" className={getNavLinkClass}>
-                Admin
-              </NavLink>
+            <div className="ml-10 flex items-center space-x-4">
+              <DesktopNavLink to="/">Inicio</DesktopNavLink>
+              <DesktopNavLink to="/prestadores">Buscar Prestadores</DesktopNavLink>
+              
+              {esAdmin && (
+                <DesktopNavLink to="/administrador">Admin</DesktopNavLink>
+              )}
+              
+              {isAuthenticated ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button 
+                      type="button" 
+                      aria-label="Abrir menú de usuario"
+                      className="rounded-full focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-slate-800"
+                    >
+                      <UserAvatar user={user} />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56" align="end">
+                    <DropdownMenuLabel>
+                      <div className="font-medium text-white">{user?.nombres}</div>
+                      <div className="text-xs text-slate-400 font-normal capitalize">{user?.rol}</div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuGroup>
+                      <DropdownMenuItem onClick={() => navigate('/perfil')}>
+                        <User className="mr-2 h-4 w-4" />
+                        <span>Mi Perfil</span>
+                      </DropdownMenuItem>
+                      
+                      {/* Links condicionales por Rol */}
+                      {esPrestador && (
+                        <DropdownMenuItem onClick={() => navigate('/calendario')}>
+                          <Calendar className="mr-2 h-4 w-4" />
+                          <span>Mi Agenda</span>
+                        </DropdownMenuItem>
+                      )}
+                      
+                      {esCliente && (
+                        <>
+                          <DropdownMenuItem onClick={() => navigate('/perfil')}>
+                            <UserCheck className="mr-2 h-4 w-4" />
+                            <span>Mis Citas</span>
+                          </DropdownMenuItem>
+                          
+                          {/* --- 2. ¡AQUÍ ESTÁ EL ARREGLO! --- */}
+                          <DropdownMenuItem onClick={() => navigate('/postular')}>
+                            <FileText className="mr-2 h-4 w-4" />
+                            <span>Postular como Prestador</span>
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuGroup>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout} className="text-red-400 focus:bg-red-900/50 focus:text-red-300">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Cerrar Sesión</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <DesktopNavLink to="/login">Iniciar Sesión</DesktopNavLink>
+              )}
             </div>
           </div>
 
-          {/* --- Botón de Registro (Escritorio) --- */}
-          <div className="hidden md:block">
-            <NavLink 
-              to="/registro" 
-              className="bg-cyan-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-cyan-400 transition-colors"
-            >
-              Regístrate
-            </NavLink>
-          </div>
-
-          {/* --- Botón de Menú Hamburguesa --- */}
+          {/* ... (El resto del código, Botón Móvil y Menú Móvil, no cambia) ... */}
           <div className="-mr-2 flex md:hidden">
             <button
               onClick={() => setIsOpen(!isOpen)}
               type="button"
-              className="bg-slate-800 inline-flex items-center justify-center p-2 rounded-md text-slate-400 hover:text-white hover:bg-slate-700 focus:outline-none"
-              aria-controls="mobile-menu"
-              aria-expanded="false"
+              className="inline-flex items-center justify-center rounded-md bg-slate-700 p-2 text-slate-300 hover:bg-slate-600 hover:text-white"
             >
-              <span className="sr-only">Abrir menú principal</span>
-              {!isOpen ? (
-                <svg className="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              ) : (
-                <svg className="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              )}
+              <span className="sr-only">Abrir menú</span>
+              {isOpen ? <FaTimes className="block h-6 w-6" /> : <FaBars className="block h-6 w-6" />}
             </button>
           </div>
         </div>
-      </nav>
+      </div>
 
-      {/* --- Menú Desplegable Móvil --- */}
-      {isOpen && (
-        <div className="md:hidden" id="mobile-menu">
-          <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-            <NavLink to="/" className={getMobileNavLinkClass}>
-              Inicio
-            </NavLink>
-            <NavLink to="/prestadores" className={getMobileNavLinkClass}>
-              Buscar Agentes
-            </NavLink>
-            {/* --- NUEVO ENLACE AÑADIDO AQUÍ --- */}
-            <NavLink to="/calendario" className={getMobileNavLinkClass}>
-              Agenda
-            </NavLink>
-            {/* ---------------------------------- */}
-            <NavLink to="/postular" className={getMobileNavLinkClass}>
-              Postular
-            </NavLink>
-            <NavLink to="/administrador" className={getMobileNavLinkClass}>
-              Admin
-            </NavLink>
-          </div>
-          <div className="pt-4 pb-3 border-t border-slate-700">
-            <div className="px-2">
-              <NavLink 
-                to="/registro" 
-                className="w-full text-center bg-cyan-500 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-cyan-400 block"
-              >
-                Regístrate
-              </NavLink>
+      {/* Menú Móvil (este ya estaba correcto) */}
+      <div className={`${isOpen ? 'block' : 'hidden'} md:hidden border-t border-slate-700`} id="mobile-menu">
+        {isAuthenticated && user && (
+          <div className="px-5 pt-4 pb-3 border-b border-slate-700">
+            <div className="flex items-center gap-3">
+              <UserAvatar user={user} />
+              <div>
+                <div className="text-base font-medium text-white">{user.nombres}</div>
+                <div className="text-sm font-medium text-slate-400 capitalize">{user.rol}</div>
+              </div>
             </div>
           </div>
+        )}
+        
+        <div className="space-y-1 px-2 pb-3 pt-2 sm:px-3">
+          <MobileNavLink to="/" onClick={closeMenu}>Inicio</MobileNavLink>
+          <MobileNavLink to="/prestadores" onClick={closeMenu}>Buscar Prestadores</MobileNavLink>
+          
+          {esAdmin && (
+            <MobileNavLink to="/administrador" onClick={closeMenu}>Admin</MobileNavLink>
+          )}
+
+          {esPrestador && (
+            <MobileNavLink to="/calendario" onClick={closeMenu}>Mi Agenda</MobileNavLink>
+          )}
+          {esCliente && (
+            <MobileNavLink to="/postular" onClick={closeMenu}>Postular</MobileNavLink>
+          )}
+
+          {isAuthenticated ? (
+            <>
+              <MobileNavLink to="/perfil" onClick={closeMenu}>Mi Perfil</MobileNavLink>
+              <button
+                onClick={handleLogout}
+                className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:bg-slate-700 hover:text-white"
+              >
+                Cerrar Sesión
+              </button>
+            </>
+          ) : (
+            <MobileNavLink to="/login" onClick={closeMenu}>Iniciar Sesión</MobileNavLink>
+          )}
         </div>
-      )}
-    </header>
+      </div>
+    </nav>
   );
 }

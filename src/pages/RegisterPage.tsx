@@ -1,68 +1,248 @@
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { normalizeRut, isValidRutFormat } from "../utils/rut";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 
-import { Link } from 'react-router-dom';
+const registerSchema = z
+  .object({
+    nombres: z.string().min(1, "Requerido"),
+    primer_apellido: z.string().min(1, "Requerido"),
+    segundo_apellido: z.string().min(1, "Requerido"),
+    rut: z
+      .string()
+      .min(2, "RUT requerido")
+      .refine((v) => isValidRutFormat(normalizeRut(v)), {
+        message: "RUT inválido",
+      }),
+    correo: z.string().email("Correo inválido"),
+    direccion: z.string().min(1, "Requerido"),
+    fecha_de_nacimiento: z.string().min(1, "Requerido"),
+    genero: z.string().min(1, "Requerido"),
+    password: z.string().min(6, "Mínimo 6 caracteres"),
+    confirmPassword: z.string().min(6, "Requerido"),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Las contraseñas no coinciden",
+    path: ["confirmPassword"],
+  });
 
-// Componente reutilizable para los campos del formulario
-function FormField({ label, type, placeholder, id }: { readonly label: string, readonly type: string, readonly placeholder: string, readonly id: string }) {
-    return (
-        <div>
-            <label htmlFor={id} className="block mb-2 text-sm font-medium text-slate-200">{label}</label>
-            <input
-                type={type}
-                id={id}
-                className="w-full rounded-lg border border-slate-700 bg-slate-800 p-3 text-base text-white focus:border-cyan-400 focus:ring-cyan-400"
-                placeholder={placeholder}
-                required
-            />
-        </div>
-    );
-}
+type RegisterForm = z.infer<typeof registerSchema>;
 
-function RegisterPage() {
+export default function RegisterPage() {
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    formState: { errors, isSubmitting },
+  } = useForm<RegisterForm>({
+    resolver: zodResolver(registerSchema),
+  });
+
+  const [showPassword, setShowPassword] = useState(false);
+
+  const onSubmit = async (data: RegisterForm) => {
+    const rutNormalizado = normalizeRut(data.rut);
+
+    console.log("Enviando:", {
+      ...data,
+      rut: rutNormalizado,
+    });
+  };
+
   return (
-    <div className="bg-slate-900 flex items-center justify-center min-h-screen p-4 sm:p-6">
-      <div className="mx-auto w-full max-w-2xl">
-        <div className="text-center mb-10">
-            <h1 className="text-4xl font-bold text-white font-poppins" style={{ textShadow: '0 0 15px rgba(34, 211, 238, 0.4)' }}>
-                Crear Nueva Cuenta
-            </h1>
-            <p className="mt-2 text-slate-400">Únete a la red Chambee. El primer paso para conectar.</p>
-        </div>
+    <div className="flex min-h-screen items-center justify-center p-4 bg-slate-900 text-slate-200">
+      <div className="w-full max-w-2xl rounded-lg bg-slate-800 p-8 border border-slate-700 shadow-md">
+        <h1 className="text-2xl font-semibold mb-6 text-center">
+          Crear Cuenta
+        </h1>
 
-        <form className="space-y-6 bg-slate-800/50 border border-slate-700 p-8 rounded-lg">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField label="Nombres" type="text" id="nombres" placeholder="Tus nombres" />
-                <FormField label="Primer Apellido" type="text" id="primer_apellido" placeholder="Tu primer apellido" />
-                <FormField label="Segundo Apellido" type="text" id="segundo_apellido" placeholder="Tu segundo apellido" />
-                <FormField label="RUT" type="text" id="rut" placeholder="12.345.678-9" />
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {/* 🔹 DATOS PERSONALES */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Nombres */}
+            <div>
+              <label className="block mb-1">
+                Nombres <span className="text-red-500">*</span>
+              </label>
+              <input {...register("nombres")} className="input-base w-full" />
+              {errors.nombres && (
+                <p className="text-red-400 text-sm mt-1">
+                  {errors.nombres.message}
+                </p>
+              )}
             </div>
-            
-            <FormField label="Correo Electrónico" type="email" id="correo" placeholder="tu@correo.cl" />
-            <FormField label="Dirección" type="text" id="direccion" placeholder="Tu dirección completa" />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField label="Contraseña" type="password" id="password" placeholder="••••••••" />
-                <FormField label="Confirmar Contraseña" type="password" id="confirm_password" placeholder="••••••••" />
+            {/* Primer Apellido */}
+            <div>
+              <label className="block mb-1">
+                Primer Apellido <span className="text-red-500">*</span>
+              </label>
+              <input
+                {...register("primer_apellido")}
+                className="input-base w-full"
+              />
+              {errors.primer_apellido && (
+                <p className="text-red-400 text-sm mt-1">
+                  {errors.primer_apellido.message}
+                </p>
+              )}
             </div>
-            
-            <div className="pt-4">
-                <button
-                  type="submit"
-                  className="w-full rounded-lg bg-cyan-500 px-8 py-3 text-lg font-bold text-white hover:bg-cyan-400 focus:outline-none focus:ring-4 focus:ring-cyan-500/50 transition-colors"
+
+            {/* Segundo Apellido */}
+            <div>
+              <label className="block mb-1">
+                Segundo Apellido <span className="text-red-500">*</span>
+              </label>
+              <input
+                {...register("segundo_apellido")}
+                className="input-base w-full"
+              />
+              {errors.segundo_apellido && (
+                <p className="text-red-400 text-sm mt-1">
+                  {errors.segundo_apellido.message}
+                </p>
+              )}
+            </div>
+
+            {/* RUT */}
+            <div>
+              <label className="block mb-1">
+                RUT <span className="text-red-500">*</span>
+              </label>
+              <input
+                {...register("rut")}
+                className="input-base w-full"
+                onBlur={(e) => setValue("rut", normalizeRut(e.target.value))}
+              />
+              {errors.rut && (
+                <p className="text-red-400 text-sm mt-1">
+                  {errors.rut.message}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* 🔹 CORREO */}
+          <div>
+            <label className="block mb-1">
+              Correo Electrónico <span className="text-red-500">*</span>
+            </label>
+            <input {...register("correo")} className="input-base w-full" />
+            {errors.correo && (
+              <p className="text-red-400 text-sm mt-1">
+                {errors.correo.message}
+              </p>
+            )}
+          </div>
+
+          {/* 🔹 DIRECCIÓN */}
+          <div>
+            <label className="block mb-1">
+              Dirección <span className="text-red-500">*</span>
+            </label>
+            <input {...register("direccion")} className="input-base w-full" />
+            {errors.direccion && (
+              <p className="text-red-400 text-sm mt-1">
+                {errors.direccion.message}
+              </p>
+            )}
+          </div>
+
+          {/* 🔹 NACIMIENTO + GENERO */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Fecha Nacimiento */}
+            <div>
+              <label className="block mb-1">
+                Fecha de Nacimiento <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                {...register("fecha_de_nacimiento")}
+                className="input-base w-full"
+              />
+              {errors.fecha_de_nacimiento && (
+                <p className="text-red-400 text-sm mt-1">
+                  {errors.fecha_de_nacimiento.message}
+                </p>
+              )}
+            </div>
+
+            {/* Genero */}
+            <div>
+              <label className="block mb-1">
+                Género <span className="text-red-500">*</span>
+              </label>
+              <select {...register("genero")} className="input-base w-full">
+                <option value="">Seleccionar</option>
+                <option value="Femenino">Femenino</option>
+                <option value="Masculino">Masculino</option>
+                <option value="Otro">Otro</option>
+              </select>
+              {errors.genero && (
+                <p className="text-red-400 text-sm mt-1">
+                  {errors.genero.message}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* 🔹 PASSWORD */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Password */}
+            <div>
+              <label className="block mb-1">
+                Contraseña <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  {...register("password")}
+                  className="input-base w-full pr-10"
+                />
+                <span
+                  className="absolute right-3 top-2.5 cursor-pointer"
+                  onClick={() => setShowPassword((v) => !v)}
                 >
-                  Registrar Cuenta
-                </button>
+                  {showPassword ? <FaEyeSlash /> : <FaEye />}
+                </span>
+              </div>
+              {errors.password && (
+                <p className="text-red-400 text-sm mt-1">
+                  {errors.password.message}
+                </p>
+              )}
             </div>
 
-            <p className="text-center text-sm text-slate-400 pt-4">
-                ¿Ya tienes una cuenta?{' '}
-                <Link to="/login" className="font-medium text-cyan-400 hover:underline">
-                    Inicia Sesión
-                </Link>
-            </p>
+            {/* Confirm Password */}
+            <div>
+              <label className="block mb-1">
+                Confirmar Contraseña <span className="text-red-500">*</span>
+              </label>
+              <input
+                type={showPassword ? "text" : "password"}
+                {...register("confirmPassword")}
+                className="input-base w-full"
+              />
+              {errors.confirmPassword && (
+                <p className="text-red-400 text-sm mt-1">
+                  {errors.confirmPassword.message}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Botón */}
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full mt-2 py-2 rounded-md bg-cyan-600 hover:bg-cyan-700 text-white font-medium disabled:opacity-50"
+          >
+            {isSubmitting ? "Registrando..." : "Registrar Cuenta"}
+          </button>
         </form>
       </div>
     </div>
   );
 }
-
-export default RegisterPage;

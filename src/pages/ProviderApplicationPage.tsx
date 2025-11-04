@@ -1,86 +1,327 @@
+import axios from 'axios';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { useAuthStore } from '../store/authStore';
+import { useForm, type SubmitHandler, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { FaSpinner } from 'react-icons/fa';
 
-import { FileUpload } from '../components/form/FileUpload';
+import { InfoDialog } from '../components/ui/InfoDialog';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Textarea } from '../components/ui/textarea';
+import { Label } from '../components/ui/label';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '../components/ui/select';
 
-function FormField({ label, type, placeholder, id }: { readonly label: string, readonly type: string, readonly placeholder: string, readonly id: string }) {
-    return (
-        <div>
-            <label htmlFor={id} className="block mb-2 text-sm font-medium text-gray-700">{label}</label>
-            <input
-                type={type}
-                id={id}
-                className="w-full rounded-lg border-gray-300 bg-white p-3 text-base text-gray-900 shadow-sm transition-shadow duration-200 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/50"
-                placeholder={placeholder}
-                required
-            />
-        </div>
-    );
+const OFICIOS_LISTA = [
+  "Gasfitería", "Electricidad", "Pintura", "Albañilería", "Carpintería",
+  "Jardinería", "Mecánica", "Plomería", "Cerrajería", 
+  "Reparación de Electrodomésticos", "Instalación de Aire Acondicionado",
+  "Servicios de Limpieza", "Techado", "Otro"
+];
+
+const applicationSchema = z.object({
+  nombres: z.string().min(1, "El nombre es requerido"),
+  primer_apellido: z.string().min(1, "El apellido es requerido"),
+  segundo_apellido: z.string().optional(),
+  direccion: z.string().min(1, "La dirección es requerida"),
+  telefono: z.string().optional(),
+  oficio: z.string().min(1, "Debes seleccionar un oficio"),
+  bio: z.string().min(50, "Tu biografía debe tener al menos 50 caracteres"),
+  
+  archivos_portafolio: z.instanceof(FileList)
+    .refine((files) => files.length > 0, "Debes subir al menos una imagen para tu portafolio.")
+    .refine((files) => Array.from(files).every(file => file.size <= 5 * 1024 * 1024), "Cada archivo no debe superar los 5MB."),
+    
+  archivos_certificados: z.instanceof(FileList)
+    .refine((files) => files.length > 0, "Debes subir al menos un certificado.")
+    .refine((files) => Array.from(files).every(file => file.size <= 5 * 1024 * 1024), "Cada archivo no debe superar los 5MB."),
+});
+
+type ApplicationFormInputs = z.infer<typeof applicationSchema>;
+
+interface UserProfile {
+  nombres: string;
+  primer_apellido: string;
+  segundo_apellido: string | null;
+  direccion: string | null;
+  telefono: string | null;
 }
 
-function ProviderApplicationPage() {
+const fetchUserProfile = async (token: string | null): Promise<UserProfile> => {
+  if (!token) throw new Error("No autenticado");
+  const { data } = await axios.get('/api/profile/me', { 
+    headers: { Authorization: `Bearer ${token}` } 
+  });
+  return data;
+};
+
+const sendPostulacion = async ({ formData, token }: { formData: FormData, token: string | null }) => {
+  if (!token) throw new Error("No autenticado");
+  const { data } = await axios.post('/api/postulaciones', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+      Authorization: `Bearer ${token}`
+    }
+  });
+  return data;
+};
+
+export default function ProviderApplicationPage() {
+  const token = useAuthStore((state) => state.token);
+  const navigate = useNavigate();
+  
+  const [modalInfo, setModalInfo] = useState<{ isOpen: boolean; title: string; description: string; type: 'success' | 'error' }>({
+    isOpen: false,
+    title: '',
+    description: '',
+    type: 'success',
+  });
+
+  const { register, handleSubmit, control, watch, reset, formState: { errors } } = useForm<ApplicationFormInputs>({
+    resolver: zodResolver(applicationSchema),
+    defaultValues: {
+      nombres: "",
+      primer_apellido: "",
+      segundo_apellido: "",
+      direccion: "",
+      telefono: "",
+      bio: "",
+    }
+  });
+  
+  const { data: profile, isLoading: isLoadingProfile } = useQuery({
+    queryKey: ['userProfile'],
+    queryFn: () => fetchUserProfile(token),
+    enabled: !!token,
+  });
+
+  useEffect(() => {
+    if (profile) {
+      reset({
+        nombres: profile.nombres || '',
+        primer_apellido: profile.primer_apellido || '',
+        segundo_apellido: profile.segundo_apellido || '',
+        direccion: profile.direccion || '',
+        telefono: profile.telefono || '',
+      });
+    }
+  }, [profile, reset]);
+
+  const portfolioFiles = watch("archivos_portafolio");
+  const certificateFiles = watch("archivos_certificados");
+
+  const mutation = useMutation({
+    mutationFn: sendPostulacion,
+    onSuccess: (data) => {
+      setModalInfo({
+        isOpen: true,
+        title: '¡Postulación Enviada!',
+        description: `Tu postulación ha sido enviada con éxito. Estado actual: ${data.statusPostulacion}. Serás notificado cuando sea revisada.`,
+        type: 'success',
+      });
+    },
+    onError: (err) => {
+      console.error(err);
+      setModalInfo({
+        isOpen: true,
+        title: 'Error al Enviar',
+        description: 'No se pudo enviar tu postulación. Por favor, revisa los campos e intenta de nuevo.',
+        type: 'error',
+      });
+    }
+  });
+  
+  const handleCloseModal = () => {
+    setModalInfo({ ...modalInfo, isOpen: false });
+    if (modalInfo.type === 'success') {
+      navigate('/perfil');
+    }
+  };
+
+  const onSubmit: SubmitHandler<ApplicationFormInputs> = (data) => {
+    const formData = new FormData();
+    formData.append('nombres', data.nombres);
+    formData.append('primer_apellido', data.primer_apellido);
+    if (data.segundo_apellido) formData.append('segundo_apellido', data.segundo_apellido);
+    formData.append('direccion', data.direccion);
+    if (data.telefono) formData.append('telefono', data.telefono);
+    formData.append('oficio', data.oficio);
+    formData.append('bio', data.bio);
+
+    Array.from(data.archivos_portafolio).forEach(file => {
+      formData.append('archivos_portafolio', file);
+    });
+    Array.from(data.archivos_certificados).forEach(file => {
+      formData.append('archivos_certificados', file);
+    });
+
+    mutation.mutate({ formData, token });
+  };
+  
+  const InputError = ({ message }: { message?: string }) => 
+    message ? <p className="mt-1 text-sm text-red-400">{message}</p> : null;
+    
+  const getFileLabel = (files: FileList | undefined) => {
+    if (!files || files.length === 0) {
+      return "Ningún archivo seleccionado";
+    }
+    if (files.length === 1) {
+      return files[0].name;
+    }
+    return `${files.length} archivos seleccionados`;
+  };
+
+  if (isLoadingProfile) {
+    return (
+      <div className="flex justify-center items-center min-h-[50vh]">
+        <FaSpinner className="animate-spin text-amber-400 text-4xl" />
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-gray-100 p-4 sm:p-8">
-      <div className="mx-auto max-w-3xl">
-        <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold text-gray-800 font-poppins">
-                Postula para ser Agente
-            </h1>
-            <p className="mt-3 text-lg text-gray-600">Únete a la red de profesionales de Chambee.</p>
-        </div>
+    <>
+      <InfoDialog
+        isOpen={modalInfo.isOpen}
+        onClose={handleCloseModal}
+        title={modalInfo.title}
+        description={modalInfo.description}
+        type={modalInfo.type}
+      />
 
-        <form className="space-y-8">
-            <div className="p-6 bg-white rounded-lg border border-gray-200 shadow-sm">
-                <h2 className="text-xl font-semibold text-gray-700 mb-6 font-poppins border-b pb-3">Identificación</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField label="Nombres" type="text" id="nombres" placeholder="Tus nombres" />
-                    <FormField label="Primer Apellido" type="text" id="primer_apellido" placeholder="Tu primer apellido" />
-                    <FormField label="Segundo Apellido" type="text" id="segundo_apellido" placeholder="Tu segundo apellido" />
-                    <FormField label="RUT" type="text" id="rut" placeholder="12.345.678-9" />
-                    <FormField label="Correo Electrónico" type="email" id="correo" placeholder="tu@correo.cl" />
-                    <FormField label="Dirección" type="text" id="direccion" placeholder="Tu dirección completa" />
-                    <FormField label="Teléfono" type="tel" id="telefono" placeholder="+56 9 1234 5678" />
-                </div>
-            </div>
-
-            <div className="p-6 bg-white rounded-lg border border-gray-200 shadow-sm">
-                <h2 className="text-xl font-semibold text-gray-700 mb-6 font-poppins border-b pb-3">Perfil Profesional</h2>
-                 <div>
-                    <label htmlFor="oficio" className="block mb-2 text-sm font-medium text-gray-700">Oficio o Profesión Principal</label>
-                    <input type="text" id="oficio" placeholder="Ej: Gasfitería, Electricidad Certificada" className="w-full rounded-lg border-gray-300 bg-white p-3 text-base text-gray-900 shadow-sm transition-shadow duration-200 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/50" />
-                </div>
-                <div className="mt-6">
-                    <label htmlFor="bio" className="block mb-2 text-sm font-medium text-gray-700">Cuéntanos sobre ti y tu experiencia (Bio)</label>
-                    <textarea id="bio" rows={4} className="w-full rounded-lg border-gray-300 bg-white p-3 text-base text-gray-900 shadow-sm transition-shadow duration-200 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/50" placeholder="Describe brevemente tus servicios, años de experiencia, etc."></textarea>
-                </div>
-            </div>
-
-            <div className="p-6 bg-white rounded-lg border border-gray-200 shadow-sm">
-                <h2 className="text-xl font-semibold text-gray-700 mb-6 font-poppins border-b pb-3">Documentación</h2>
-                <div className="space-y-6">
-                    <FileUpload
-                        label="Portafolio de Trabajos"
-                        helpText="Sube imágenes de tus mejores trabajos (JPG, PNG, GIF)"
-                        acceptedFileTypes="image/*"
-                    />
-                    <FileUpload
-                        label="Certificados y Documentos"
-                        helpText="Cédula de identidad, certificados de estudios, etc. (PDF, JPG, PNG)"
-                        acceptedFileTypes=".pdf,image/jpeg,image.png"
-                    />
-                </div>
+      <div className="p-4 sm:p-8">
+        <div className="mx-auto max-w-2xl">
+          <h1 className="text-4xl font-bold text-white font-poppins mb-8 text-center [text-shadow:0_0_15px_rgba(234,179,8,0.4)]">
+            Postula para ser Prestador
+          </h1>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <Label htmlFor="nombres">Nombres</Label>
+                <Input type="text" id="nombres" {...register("nombres")} className={errors.nombres ? 'border-red-500' : ''} />
+                <InputError message={errors.nombres?.message} />
+              </div>
+              <div>
+                <Label htmlFor="primer_apellido">Primer Apellido</Label>
+                <Input type="text" id="primer_apellido" {...register("primer_apellido")} className={errors.primer_apellido ? 'border-red-500' : ''} />
+                <InputError message={errors.primer_apellido?.message} />
+              </div>
             </div>
             
-            <div className="text-center pt-4">
-                <button
-                  type="submit"
-                  className="w-full md:w-auto rounded-lg bg-cyan-600 px-10 py-4 text-lg font-bold text-white shadow-lg hover:bg-cyan-700 focus:outline-none focus:ring-4 focus:ring-cyan-500/50 transition-all duration-300 transform hover:scale-105"
-                >
-                  Enviar Postulación
-                </button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <Label htmlFor="segundo_apellido">Segundo Apellido (Opcional)</Label>
+                <Input type="text" id="segundo_apellido" {...register("segundo_apellido")} />
+              </div>
+              <div>
+                <Label htmlFor="telefono">Teléfono (Opcional)</Label>
+                <Input type="tel" id="telefono" {...register("telefono")} />
+              </div>
             </div>
-        </form>
+
+            <div>
+              <Label htmlFor="direccion">Dirección</Label>
+              <Input type="text" id="direccion" {...register("direccion")} className={errors.direccion ? 'border-red-500' : ''} />
+              <InputError message={errors.direccion?.message} />
+            </div>
+
+            <div>
+              <Label htmlFor="oficio">Oficio Principal</Label>
+              <Controller
+                name="oficio"
+                control={control}
+                render={({ field }) => (
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <SelectTrigger className={errors.oficio ? 'border-red-500' : ''}>
+                      <SelectValue placeholder="Selecciona tu especialidad principal..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {OFICIOS_LISTA.map((oficio) => (
+                        <SelectItem key={oficio} value={oficio}>{oficio}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              <InputError message={errors.oficio?.message} />
+            </div>
+
+            <div>
+              <Label htmlFor="bio">Biografía (mín. 50 caracteres)</Label>
+              <Textarea id="bio" rows={4} {...register("bio")} className={errors.bio ? 'border-red-500' : ''} placeholder="Habla sobre ti, tu experiencia..." />
+              <InputError message={errors.bio?.message} />
+            </div>
+
+            <div>
+              <Label>Portafolio (Imágenes de trabajos)</Label>
+              <label 
+                htmlFor="archivos_portafolio" 
+                className={`flex h-10 w-full items-center rounded-md border border-slate-700 bg-slate-900/50 px-3 text-sm text-slate-100 ${errors.archivos_portafolio ? 'border-red-500' : ''} cursor-pointer`}
+              >
+                <span className="rounded-md bg-amber-400 text-slate-900 hover:bg-amber-400/90 px-4 py-1.5 text-sm font-semibold cursor-pointer">
+                  Elegir archivos
+                </span>
+                <span className="ml-3 text-sm text-slate-400 truncate">
+                  {getFileLabel(portfolioFiles)}
+                </span>
+              </label>
+              <Input 
+                type="file" 
+                id="archivos_portafolio" 
+                {...register("archivos_portafolio")} 
+                multiple 
+                accept="image/*" 
+                className="hidden"
+              />
+              <InputError message={errors.archivos_portafolio?.message} />
+            </div>
+            
+            <div>
+              <Label>Certificados (PDF o Imágenes)</Label>
+              <label 
+                htmlFor="archivos_certificados" 
+                className={`flex h-10 w-full items-center rounded-md border border-slate-700 bg-slate-900/50 px-3 text-sm text-slate-100 ${errors.archivos_certificados ? 'border-red-500' : ''} cursor-pointer`}
+              >
+                <span className="rounded-md bg-amber-400 text-slate-900 hover:bg-amber-400/90 px-4 py-1.5 text-sm font-semibold cursor-pointer">
+                  Elegir archivos
+                </span>
+                <span className="ml-3 text-sm text-slate-400 truncate">
+                  {getFileLabel(certificateFiles)}
+                </span>
+              </label>
+              <Input 
+                type="file" 
+                id="archivos_certificados" 
+                {...register("archivos_certificados")} 
+                multiple 
+                accept="image/*,application/pdf" 
+                className="hidden"
+              />
+              <InputError message={errors.archivos_certificados?.message} />
+            </div>
+
+            <div>
+              <Button 
+                type="submit" 
+                disabled={mutation.isPending} 
+                className="w-full bg-amber-400 text-slate-900 hover:bg-amber-400/90"
+              >
+                {mutation.isPending ? "Enviando Postulación..." : "Enviar Postulación"}
+              </Button>
+            </div>
+          </form>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
-
-export default ProviderApplicationPage;

@@ -50,7 +50,7 @@ export function Testimonials() {
                 </h2>
                 <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
                     {testimonials.map((testimonial) => (
-                        <div key={testimonial.author} className="text-center p-6 bg-white rounded-lg border border-gray-200 shadow-md">
+                        <div key={testimonial.author} className="text-center text-black p-6 bg-white rounded-lg border border-gray-200 shadow-md">
                             <StarRating rating={testimonial.rating} />
                             <blockquote className="my-4 text-gray-500 italic">
                                 "{testimonial.quote}"
