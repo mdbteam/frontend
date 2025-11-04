@@ -1,7 +1,7 @@
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { FaBars, FaTimes } from 'react-icons/fa';
-import { User, LogOut, Calendar, UserCheck, FileText } from 'lucide-react'; 
+import { User, LogOut, Calendar, UserCheck, FileText, Briefcase } from 'lucide-react'; 
 import { useState } from 'react';
 import {
   DropdownMenu,
@@ -13,9 +13,10 @@ import {
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 
-const MobileNavLink: React.FC<{ to: string, children: React.ReactNode, onClick: () => void }> = ({ to, children, onClick }) => (
+const MobileNavLink: React.FC<{ to: string, children: React.ReactNode, onClick: () => void, end?: boolean }> = ({ to, children, onClick, end }) => (
   <NavLink
     to={to}
+    end={end}
     className={({ isActive }) =>
       `block px-3 py-2 rounded-md text-base font-medium ${
         isActive ? 'bg-amber-500 text-slate-900' : 'text-slate-300 hover:bg-slate-700 hover:text-white'
@@ -27,9 +28,10 @@ const MobileNavLink: React.FC<{ to: string, children: React.ReactNode, onClick: 
   </NavLink>
 );
 
-const DesktopNavLink: React.FC<{ to: string, children: React.ReactNode }> = ({ to, children }) => (
+const DesktopNavLink: React.FC<{ to: string, children: React.ReactNode, end?: boolean }> = ({ to, children, end }) => (
   <NavLink
     to={to}
+    end={end}
     className={({ isActive }) =>
       `px-3 py-2 rounded-md text-sm font-medium transition-colors ${
         isActive ? 'text-amber-400' : 'text-slate-300 hover:bg-slate-700 hover:text-white'
@@ -59,7 +61,7 @@ export default function AppNavbar() {
   const [isOpen, setIsOpen] = useState(false);
   const { isAuthenticated, user, logout } = useAuthStore();
   const navigate = useNavigate();
-  console.log("ROL ACTUAL:", user?.rol);
+
   const handleLogout = () => {
     logout();
     setIsOpen(false);
@@ -78,17 +80,15 @@ export default function AppNavbar() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           
-          {/* Logo */}
           <div className="flex-shrink-0">
             <Link to="/" className="text-2xl font-bold text-amber-400 font-poppins">
               Cham<span className="text-white">Bee</span>
             </Link>
           </div>
 
-          {/* Links de Escritorio */}
           <div className="hidden md:block">
             <div className="ml-10 flex items-center space-x-4">
-              <DesktopNavLink to="/">Inicio</DesktopNavLink>
+              <DesktopNavLink to="/" end>Inicio</DesktopNavLink>
               <DesktopNavLink to="/prestadores">Buscar Prestadores</DesktopNavLink>
               
               {esAdmin && (
@@ -113,32 +113,39 @@ export default function AppNavbar() {
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuGroup>
-                      <DropdownMenuItem onClick={() => navigate('/perfil')}>
+                      
+                      {/* --- ¡AQUÍ ESTÁN LAS CORRECCIONES! --- */}
+                      
+                      <DropdownMenuItem onClick={() => navigate('/perfil?tab=perfil')}>
                         <User className="mr-2 h-4 w-4" />
                         <span>Mi Perfil</span>
                       </DropdownMenuItem>
                       
-                      {/* Links condicionales por Rol */}
-                      {esPrestador && (
-                        <DropdownMenuItem onClick={() => navigate('/calendario')}>
-                          <Calendar className="mr-2 h-4 w-4" />
-                          <span>Mi Agenda</span>
+                      {(esCliente || esPrestador) && (
+                        <DropdownMenuItem onClick={() => navigate('/perfil?tab=citas')}>
+                          <UserCheck className="mr-2 h-4 w-4" />
+                          <span>Mis Citas</span>
                         </DropdownMenuItem>
                       )}
                       
-                      {esCliente && (
+                      {esPrestador && (
                         <>
-                          <DropdownMenuItem onClick={() => navigate('/perfil')}>
-                            <UserCheck className="mr-2 h-4 w-4" />
-                            <span>Mis Citas</span>
+                          <DropdownMenuItem onClick={() => navigate('/perfil?tab=experiencia')}>
+                            <Briefcase className="mr-2 h-4 w-4" />
+                            <span>Mi Experiencia</span>
                           </DropdownMenuItem>
-                          
-                          {/* --- 2. ¡AQUÍ ESTÁ EL ARREGLO! --- */}
-                          <DropdownMenuItem onClick={() => navigate('/postular')}>
-                            <FileText className="mr-2 h-4 w-4" />
-                            <span>Postular como Prestador</span>
+                          <DropdownMenuItem onClick={() => navigate('/calendario')}>
+                            <Calendar className="mr-2 h-4 w-4" />
+                            <span>Mi Agenda</span>
                           </DropdownMenuItem>
                         </>
+                      )}
+                      
+                      {esCliente && (
+                        <DropdownMenuItem onClick={() => navigate('/postular')}>
+                          <FileText className="mr-2 h-4 w-4" />
+                          <span>Postular como Prestador</span>
+                        </DropdownMenuItem>
                       )}
                     </DropdownMenuGroup>
                     <DropdownMenuSeparator />
@@ -154,7 +161,6 @@ export default function AppNavbar() {
             </div>
           </div>
 
-          {/* ... (El resto del código, Botón Móvil y Menú Móvil, no cambia) ... */}
           <div className="-mr-2 flex md:hidden">
             <button
               onClick={() => setIsOpen(!isOpen)}
@@ -168,7 +174,7 @@ export default function AppNavbar() {
         </div>
       </div>
 
-      {/* Menú Móvil (este ya estaba correcto) */}
+      {/* --- MENÚ MÓVIL (TAMBIÉN CORREGIDO) --- */}
       <div className={`${isOpen ? 'block' : 'hidden'} md:hidden border-t border-slate-700`} id="mobile-menu">
         {isAuthenticated && user && (
           <div className="px-5 pt-4 pb-3 border-b border-slate-700">
@@ -183,23 +189,32 @@ export default function AppNavbar() {
         )}
         
         <div className="space-y-1 px-2 pb-3 pt-2 sm:px-3">
-          <MobileNavLink to="/" onClick={closeMenu}>Inicio</MobileNavLink>
+          <MobileNavLink to="/" onClick={closeMenu} end>Inicio</MobileNavLink>
           <MobileNavLink to="/prestadores" onClick={closeMenu}>Buscar Prestadores</MobileNavLink>
           
           {esAdmin && (
             <MobileNavLink to="/administrador" onClick={closeMenu}>Admin</MobileNavLink>
           )}
 
-          {esPrestador && (
-            <MobileNavLink to="/calendario" onClick={closeMenu}>Mi Agenda</MobileNavLink>
-          )}
-          {esCliente && (
-            <MobileNavLink to="/postular" onClick={closeMenu}>Postular</MobileNavLink>
-          )}
-
           {isAuthenticated ? (
             <>
-              <MobileNavLink to="/perfil" onClick={closeMenu}>Mi Perfil</MobileNavLink>
+              <MobileNavLink to="/perfil?tab=perfil" onClick={closeMenu} end>Mi Perfil</MobileNavLink>
+              
+              {(esCliente || esPrestador) && (
+                <MobileNavLink to="/perfil?tab=citas" onClick={closeMenu}>Mis Citas</MobileNavLink>
+              )}
+
+              {esPrestador && (
+                <>
+                  <MobileNavLink to="/perfil?tab=experiencia" onClick={closeMenu}>Mi Experiencia</MobileNavLink>
+                  <MobileNavLink to="/calendario" onClick={closeMenu}>Mi Agenda</MobileNavLink>
+                </>
+              )}
+              
+              {esCliente && (
+                <MobileNavLink to="/postular" onClick={closeMenu}>Postular</MobileNavLink>
+              )}
+
               <button
                 onClick={handleLogout}
                 className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:bg-slate-700 hover:text-white"

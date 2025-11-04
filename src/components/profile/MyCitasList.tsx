@@ -25,9 +25,9 @@ interface CitaDetail {
   id_prestador: number;
   fecha_hora_cita: string;
   detalles: string | null;
-  estado: string;
+  estado: string; // 'pendiente', 'aceptada', 'rechazada'
   id_trabajo: number | null;
-  estado_trabajo: string | null;
+  estado_trabajo: string | null; // 'propuesto', 'aceptado', 'finalizado', 'confirmado', 'valorado'
   cliente_nombres: string | null;
   prestador_nombres: string | null;
   id_valoracion: number | null;
@@ -62,6 +62,20 @@ const fetchMyCitas = async (token: string | null) => {
     headers: { Authorization: `Bearer ${token}` },
   });
   return data;
+};
+
+const acceptCita = async ({ id_cita, token }: { id_cita: number, token: string | null }) => {
+  if (!token) throw new Error("No estás autenticado");
+  return axios.post(`/api/calendario/citas/${id_cita}/aceptar`, {}, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+};
+
+const rejectCita = async ({ id_cita, token }: { id_cita: number, token: string | null }) => {
+  if (!token) throw new Error("No estás autenticado");
+  return axios.post(`/api/calendario/citas/${id_cita}/rechazar`, {}, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
 };
 
 const createTrabajo = async ({ payload, token }: { payload: TrabajoCreatePayload, token: string | null }) => {
@@ -227,32 +241,64 @@ function RateTrabajoModal({ trabajo, isOpen, onClose, onSuccess, onError }: { tr
   );
 }
 
-// --- Componente de Badge de Estado ---
+// --- Componente de Badge de Estado (CORREGIDO) ---
 function CitaStatusBadge({ cita }: { cita: CitaDetail }) {
+  
+  // Prioridad 1: Mostrar el estado del TRABAJO si existe
   if (cita.estado_trabajo) {
-    let color = "bg-blue-500/20 text-blue-300";
-    if (cita.estado_trabajo === 'aceptado') color = "bg-green-500/20 text-green-300";
-    if (cita.estado_trabajo === 'finalizado') color = "bg-indigo-500/20 text-indigo-300";
-    if (cita.estado_trabajo === 'confirmado' || cita.estado_trabajo === 'valorado') color = "bg-purple-500/20 text-purple-300";
+    let color = "bg-blue-500/20 text-blue-300"; // propuesto
+    let texto = `Trabajo: ${cita.estado_trabajo}`;
+
+    switch (cita.estado_trabajo.toLowerCase().trim()) {
+      case 'aceptado':
+        color = "bg-green-500/20 text-green-300";
+        texto = "Trabajo: Aceptado";
+        break;
+      case 'finalizado':
+        color = "bg-indigo-500/20 text-indigo-300";
+        texto = "Trabajo: Finalizado";
+        break;
+      case 'confirmado':
+      case 'valorado':
+        color = "bg-purple-500/20 text-purple-300";
+        texto = "Trabajo: Completado";
+        break;
+    }
     
     return (
       <span className={`px-3 py-1 text-xs font-medium rounded-full capitalize ${color}`}>
-        Trabajo: {cita.estado_trabajo}
+        {texto}
       </span>
     );
   }
 
-  let color = "bg-red-500/20 text-red-300";
-  if (cita.estado === 'pendiente') color = "bg-yellow-500/20 text-yellow-300";
-  if (cita.estado === 'aceptada') color = "bg-green-500/20 text-green-300";
-  if (cita.estado === 'completada') color = "bg-indigo-500/20 text-indigo-300";
+  // --- ¡AQUÍ ESTÁ LA CORRECCIÓN! ---
+  // Normalizamos el estado a minúsculas para la comparación
+  const estadoNormalizado = cita.estado.toLowerCase().trim();
+  
+  let color = "bg-red-500/20 text-red-300"; // default (rechazada/anulada)
+  
+  // Comparamos con la versión normalizada
+  switch (estadoNormalizado) { 
+    case 'pendiente':
+      color = "bg-yellow-500/20 text-yellow-300";
+      break;
+    case 'aceptada':
+      color = "bg-green-500/20 text-green-300";
+      break;
+    case 'rechazada':
+      color = "bg-red-500/20 text-red-300";
+      break;
+  }
   
   return (
     <span className={`px-3 py-1 text-xs font-medium rounded-full capitalize ${color}`}>
-      Cita: {cita.estado}
+      {/* Mostramos el estado original (con mayúscula) */}
+      Cita: {cita.estado} 
     </span>
   );
 }
+
 
 // --- Componente Principal de la Lista ---
 export function MyCitasList() {
@@ -277,6 +323,30 @@ export function MyCitasList() {
     queryFn: () => fetchMyCitas(token),
   });
 
+  const acceptCitaMutation = useMutation({
+    mutationFn: (id_cita: number) => acceptCita({ id_cita, token }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['myCitas'] });
+      setModalInfo({ isOpen: true, title: "Cita Aceptada", description: "Has aceptado la solicitud de cita. Ahora puedes crear una propuesta.", type: 'success' });
+    },
+    onError: (err) => {
+      console.error(err);
+      setModalInfo({ isOpen: true, title: "Error", description: "No se pudo aceptar la cita.", type: 'error' });
+    }
+  });
+
+  const rejectCitaMutation = useMutation({
+    mutationFn: (id_cita: number) => rejectCita({ id_cita, token }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['myCitas'] });
+      setModalInfo({ isOpen: true, title: "Cita Rechazada", description: "Has rechazado la solicitud de cita.", type: 'success' });
+    },
+    onError: (err) => {
+      console.error(err);
+      setModalInfo({ isOpen: true, title: "Error", description: "No se pudo rechazar la cita.", type: 'error' });
+    }
+  });
+  
   const acceptTrabajoMutation = useMutation({
     mutationFn: (id_trabajo: number) => acceptTrabajo({ id_trabajo, token }),
     onSuccess: () => {
@@ -332,6 +402,8 @@ export function MyCitasList() {
     setModalInfo({ isOpen: true, title: "Error", description: "La operación no pudo ser completada. Intenta de nuevo.", type: 'error' });
   };
 
+  const handleAcceptCita = (id_cita: number) => { acceptCitaMutation.mutate(id_cita); };
+  const handleRejectCita = (id_cita: number) => { rejectCitaMutation.mutate(id_cita); };
   const handleAcceptTrabajo = (id_trabajo: number | null) => { if (id_trabajo) acceptTrabajoMutation.mutate(id_trabajo); };
   const handleFinishTrabajo = (id_trabajo: number | null) => { if (id_trabajo) finishTrabajoMutation.mutate(id_trabajo); };
   const handleConfirmTrabajo = (id_trabajo: number | null) => { if (id_trabajo) confirmTrabajoMutation.mutate(id_trabajo); };
@@ -399,43 +471,65 @@ export function MyCitasList() {
               <CitaStatusBadge cita={cita} />
 
               {/* -- Lógica del Prestador -- */}
-              {esPrestador && !cita.id_trabajo && (cita.estado === 'pendiente' || cita.estado === 'aceptada' || cita.estado === 'completada') && (
-                <Button variant="default" size="sm" className="mt-2" onClick={() => setCitaToPropose(cita)}>
-                  Crear Propuesta
-                </Button>
-              )}
-              {esPrestador && cita.estado_trabajo === 'aceptado' && (
-                <Button variant="default" size="sm" className="mt-2" onClick={() => handleFinishTrabajo(cita.id_trabajo)} disabled={finishTrabajoMutation.isPending}>
-                  {finishTrabajoMutation.isPending ? "Finalizando..." : "Finalizar Trabajo"}
-                </Button>
+              {esPrestador && (
+                <>
+                  {cita.estado.toLowerCase().trim() === 'pendiente' && (
+                    <div className="flex gap-2 mt-2">
+                      <Button variant="destructive" size="sm" onClick={() => handleRejectCita(cita.id_cita)} disabled={rejectCitaMutation.isPending}>
+                        Rechazar
+                      </Button>
+                      <Button variant="default" size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => handleAcceptCita(cita.id_cita)} disabled={acceptCitaMutation.isPending}>
+                        Aceptar Cita
+                      </Button>
+                    </div>
+                  )}
+                  
+                  {cita.estado.toLowerCase().trim() === 'aceptada' && !cita.id_trabajo && (
+                    <Button variant="default" size="sm" className="mt-2" onClick={() => setCitaToPropose(cita)}>
+                      Crear Propuesta
+                    </Button>
+                  )}
+
+                  {cita.estado_trabajo === 'aceptado' && (
+                    <Button variant="default" size="sm" className="mt-2" onClick={() => handleFinishTrabajo(cita.id_trabajo)} disabled={finishTrabajoMutation.isPending}>
+                      {finishTrabajoMutation.isPending ? "Finalizando..." : "Finalizar Trabajo"}
+                    </Button>
+                  )}
+                </>
               )}
               
               {/* -- Lógica del Cliente -- */}
-              {esCliente && cita.id_trabajo && cita.estado_trabajo === 'propuesto' && (
-                <Button 
-                  variant="default" 
-                  size="sm" 
-                  className="mt-2 bg-green-600 hover:bg-green-700 text-white" 
-                  onClick={() => handleAcceptTrabajo(cita.id_trabajo)} 
-                  disabled={acceptTrabajoMutation.isPending}
-                >
-                  {acceptTrabajoMutation.isPending ? "Aceptando..." : "Aceptar Propuesta"}
-                </Button>
-              )}
-              {esCliente && cita.id_trabajo && cita.estado_trabajo === 'finalizado' && (
-                <Button variant="default" size="sm" className="mt-2" onClick={() => handleConfirmTrabajo(cita.id_trabajo)} disabled={confirmTrabajoMutation.isPending}>
-                  {confirmTrabajoMutation.isPending ? "Confirmando..." : "Confirmar Trabajo"}
-                </Button>
-              )}
-              {esCliente && cita.id_trabajo && cita.estado_trabajo === 'confirmado' && !cita.id_valoracion && (
-                <Button 
-                  variant="default" 
-                  size="sm" 
-                  className="mt-2 bg-green-600 hover:bg-green-700 text-white" 
-                  onClick={() => setCitaToRate(cita)}
-                >
-                  Dejar Reseña
-                </Button>
+              {esCliente && (
+                <>
+                  {cita.id_trabajo && cita.estado_trabajo === 'propuesto' && (
+                    <Button 
+                      variant="default" 
+                      size="sm" 
+                      className="mt-2 bg-green-600 hover:bg-green-700 text-white" 
+                      onClick={() => handleAcceptTrabajo(cita.id_trabajo)} 
+                      disabled={acceptTrabajoMutation.isPending}
+                    >
+                      {acceptTrabajoMutation.isPending ? "Aceptando..." : "Aceptar Propuesta"}
+                    </Button>
+                  )}
+                  
+                  {cita.id_trabajo && cita.estado_trabajo === 'finalizado' && (
+                    <Button variant="default" size="sm" className="mt-2" onClick={() => handleConfirmTrabajo(cita.id_trabajo)} disabled={confirmTrabajoMutation.isPending}>
+                      {confirmTrabajoMutation.isPending ? "Confirmando..." : "Confirmar Trabajo"}
+                    </Button>
+                  )}
+
+                  {cita.id_trabajo && cita.estado_trabajo === 'confirmado' && !cita.id_valoracion && (
+                    <Button 
+                      variant="default" 
+                      size="sm" 
+                      className="mt-2 bg-green-600 hover:bg-green-700 text-white" 
+                      onClick={() => setCitaToRate(cita)}
+                    >
+                      Dejar Reseña
+                    </Button>
+                  )}
+                </>
               )}
             </div>
           </div>

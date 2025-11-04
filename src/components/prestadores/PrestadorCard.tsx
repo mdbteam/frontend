@@ -1,4 +1,3 @@
-
 import { Link } from 'react-router-dom';
 
 interface PrestadorCardProps {
@@ -16,8 +15,8 @@ function StarRating({ rating }: { readonly rating: number }) {
     const emptyStars = 5 - fullStars;
     return (
         <div className="flex items-center">
-            {[...Array(fullStars)].map((_, i) => <span key={`full-${i}`} className="text-yellow-400">★</span>)}
-            {[...Array(emptyStars)].map((_, i) => <span key={`empty-${i}`} className="text-slate-600">★</span>)}
+            {[...new Array(fullStars)].map((_, i) => <span key={`full-${i}`} className="text-yellow-400">★</span>)}
+            {[...new Array(emptyStars)].map((_, i) => <span key={`empty-${i}`} className="text-slate-600">★</span>)}
         </div>
     );
 }
@@ -27,8 +26,8 @@ export function PrestadorCard({ id, nombres, primer_apellido, fotoUrl, oficio, r
   const displayName = `${nombres.split(' ')[0]} ${primer_apellido}`;
 
   return (
-    <div className="bg-slate-800/50 rounded-lg backdrop-blur-sm border border-slate-700 hover:border-yellow-400/50 transition-colors duration-300">
-      <div className="p-6">
+    <div className="bg-slate-800/50 rounded-lg backdrop-blur-sm border border-slate-700 hover:border-yellow-400/50 transition-colors duration-300 h-full flex flex-col">
+      <div className="p-6 flex-1 flex flex-col">
         <div className="flex items-center space-x-5">
           <div className="relative flex-shrink-0">
             <img 
@@ -45,16 +44,17 @@ export function PrestadorCard({ id, nombres, primer_apellido, fotoUrl, oficio, r
             <p className="text-sm text-cyan-400 font-mono">{oficio}</p>
             <div className="mt-1 flex items-center">
               <StarRating rating={puntuacion} />
-              <span className="text-xs text-slate-400 ml-2">({puntuacion})</span>
+              <span className="text-xs text-slate-400 ml-2">({puntuacion.toFixed(1)})</span>
             </div>
           </div>
         </div>
-        <p className="mt-4 text-slate-300 text-sm h-10 overflow-hidden">
+        <p className="mt-4 text-slate-300 text-sm flex-1">
           {resumen}
         </p>
         <div className="mt-6 text-right">
+          {/* --- CORRECCIÓN DE LA RUTA --- */}
           <Link 
-            to={`/perfil/${id}`} 
+            to={`/prestadores/${id}`} 
             className="bg-yellow-400 text-slate-900 font-bold py-2 px-4 rounded-md hover:bg-yellow-300 transition-colors duration-300 text-sm"
           >
             Ver Perfil

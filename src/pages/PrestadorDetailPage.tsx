@@ -24,7 +24,6 @@ import { Button } from '../components/ui/button';
 import { Textarea } from '../components/ui/textarea';
 import { Label } from '../components/ui/label';
 
-// --- (Tipos de Datos de la API) ---
 interface PerfilDetalle { id_usuario: number; nombres: string; primer_apellido: string; foto_url: string; genero: string | null; fecha_nacimiento: string | null; biografia: string | null; resumen_profesional: string | null; anos_experiencia: number | null; }
 interface Experiencia { id_experiencia: number; id_usuario: number; cargo: string; descripcion: string; fecha_inicio: string; fecha_fin: string | null; }
 interface Resena { id_valoracion: number; id_autor: number; id_evaluado: number; rol_autor: string; puntaje: number | null; comentario: string | null; fecha_creacion: string; }
@@ -42,7 +41,6 @@ interface DisponibilidadSlot { hora_inicio: string; }
 interface CreateCitaPayload { id_prestador: number; fecha_hora_cita: string; detalles: string; }
 type CitaFormInputs = { detalles: string; };
 
-// --- (Funciones de Fetching) ---
 const fetchPrestadorProfile = async (id: string) => {
   const { data } = await axios.get<PrestadorPublicoDetalle>(`/api/prestadores/${id}`);
   return data;
@@ -65,7 +63,6 @@ const createCita = async ({ payload, token }: { payload: CreateCitaPayload, toke
   return axios.post('/api/calendario/citas', payload, { headers: { Authorization: `Bearer ${token}` } });
 };
 
-// --- (Componente Principal) ---
 export default function PrestadorDetailPage() {
   const { id } = useParams<{ id: string }>();
   if (!id) throw new Error("ID de prestador no encontrado en la URL");
@@ -136,7 +133,8 @@ export default function PrestadorDetailPage() {
       className: "cursor-pointer"
     }));
 
-    const prestadorIdNum = parseInt(id, 10);
+    // --- CORRECCIÓN: parseInt -> Number.parseInt ---
+    const prestadorIdNum = Number.parseInt(id, 10);
     const eventosMisCitas: EventInput[] = (misCitas || [])
       .filter(cita => cita.id_prestador === prestadorIdNum)
       .map(cita => ({
@@ -187,7 +185,8 @@ export default function PrestadorDetailPage() {
   const onCitaSubmit: SubmitHandler<CitaFormInputs> = (data) => {
     if (!selectionToBook) return;
     const payload: CreateCitaPayload = {
-      id_prestador: parseInt(id, 10),
+      // --- CORRECCIÓN: parseInt -> Number.parseInt ---
+      id_prestador: Number.parseInt(id, 10),
       fecha_hora_cita: selectionToBook.startStr,
       detalles: data.detalles,
     };
@@ -268,8 +267,9 @@ export default function PrestadorDetailPage() {
               <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-white mb-4">Portafolio</h3>
                 <div className="grid grid-cols-2 gap-2">
-                  {profile.portafolio.map((imgUrl, index) => (
-                    <img key={index} src={imgUrl} alt={`Portafolio ${index + 1}`} className="rounded-md object-cover w-full h-24" />
+                  {/* --- CORRECCIÓN: key={imgUrl} en lugar de key={index} --- */}
+                  {profile.portafolio.map((imgUrl) => (
+                    <img key={imgUrl} src={imgUrl} alt="Foto de portafolio" className="rounded-md object-cover w-full h-24" />
                   ))}
                 </div>
               </div>
@@ -332,8 +332,9 @@ export default function PrestadorDetailPage() {
                         <span className="text-xs text-slate-400">{new Date(resena.fecha_creacion).toLocaleDateString('es-CL')}</span>
                       </div>
                       <div className="flex items-center gap-1 mt-1">
-                        {[...Array(5)].map((_, i) => (
-                          <FaStar key={i} className={i < (resena.puntaje || 0) ? 'text-yellow-400' : 'text-slate-600'} />
+                        {/* --- CORRECCIÓN: new Array() y key con prefijo --- */}
+                        {[...new Array(5)].map((_, i) => (
+                          <FaStar key={`star-${i}`} className={i < (resena.puntaje || 0) ? 'text-yellow-400' : 'text-slate-600'} />
                         ))}
                       </div>
                       <p className="text-slate-300 mt-2">{resena.comentario || 'Sin comentario.'}</p>
