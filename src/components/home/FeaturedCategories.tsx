@@ -5,13 +5,11 @@ import { MdRoofing, MdMiscellaneousServices } from 'react-icons/md';
 import { BsTools, BsSoundwave } from 'react-icons/bs';
 import * as React from 'react';
 
-// Esta es la ESTRUCTURA INTERNA que usa nuestro componente
 interface Categoria {
   id_categoria: number;
   nombre: string | null;
 }
 
-// 1. Usamos la lista de nombres que me diste
 const CATEGORIAS_NOMBRES = [
   "Gasfitería", "Electricidad", "Pintura", "Albañilería", "Carpintería",
   "Jardinería", "Mecánica", "Plomería", "Cerrajería", 
@@ -20,13 +18,11 @@ const CATEGORIAS_NOMBRES = [
   "Servicios de Limpieza", "Techado", "Otro"
 ];
 
-// 2. La convertimos al formato de objeto que necesita el componente
 const LOCAL_CATEGORIAS: Categoria[] = CATEGORIAS_NOMBRES.map((nombre, index) => ({
   id_categoria: index + 1,
   nombre: nombre
 }));
 
-// 3. El mapa de íconos completo
 const categoryIcons: { [key: string]: React.ElementType } = {
   'default': MdMiscellaneousServices,
   'gasfitería': GiTap,
@@ -51,11 +47,7 @@ const getIcon = (name: string | null | undefined) => {
   return categoryIcons[key] || categoryIcons['default'];
 };
 
-// 4. ELIMINAMOS 'useQuery', 'axios' y 'fetchCategorias'.
-// Usamos la lista local directamente.
 export function FeaturedCategories() {
-  
-  // Usamos la lista local, sin API.
   const categoriasAMostrar = LOCAL_CATEGORIAS;
 
   return (
@@ -69,9 +61,10 @@ export function FeaturedCategories() {
           const IconComponent = getIcon(nombreCat);
           
           return (
+            // --- ¡AQUÍ ESTÁ LA CORRECCIÓN! ---
             <Link
               key={cat.id_categoria}
-              to={`/prestadores?oficio=${encodeURIComponent(nombreCat)}`}
+              to={`/prestadores?categoria=${encodeURIComponent(nombreCat)}`} // Usamos 'categoria'
               className="group block text-center p-6 bg-slate-800/50 border border-slate-700 rounded-lg transition-all duration-300 hover:bg-slate-700 hover:border-amber-400"
             >
               <IconComponent className="h-10 w-10 text-amber-400 mx-auto transition-transform group-hover:scale-110" />
