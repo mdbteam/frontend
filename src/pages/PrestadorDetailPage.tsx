@@ -1,9 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react'; // Importamos useEffect
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../store/authStore';
 import { useForm, type SubmitHandler } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 
 import FullCalendar from '@fullcalendar/react';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -24,6 +26,12 @@ import { Button } from '../components/ui/button';
 import { Textarea } from '../components/ui/textarea';
 import { Label } from '../components/ui/label';
 
+const citaSchema = z.object({
+  detalles: z.string().min(10, "Por favor, da más detalles del trabajo (mín. 10 caracteres)."),
+});
+type CitaFormInputs = z.infer<typeof citaSchema>;
+
+
 interface PerfilDetalle { id_usuario: number; nombres: string; primer_apellido: string; foto_url: string; genero: string | null; fecha_nacimiento: string | null; biografia: string | null; resumen_profesional: string | null; anos_experiencia: number | null; }
 interface Experiencia { id_experiencia: number; id_usuario: number; cargo: string; descripcion: string; fecha_inicio: string; fecha_fin: string | null; }
 interface Resena { id_valoracion: number; id_autor: number; id_evaluado: number; rol_autor: string; puntaje: number | null; comentario: string | null; fecha_creacion: string; }
@@ -39,7 +47,7 @@ interface CitaDetail {
 
 interface DisponibilidadSlot { hora_inicio: string; }
 interface CreateCitaPayload { id_prestador: number; fecha_hora_cita: string; detalles: string; }
-type CitaFormInputs = { detalles: string; };
+
 
 const fetchPrestadorProfile = async (id: string) => {
   const { data } = await axios.get<PrestadorPublicoDetalle>(`/api/prestadores/${id}`);
@@ -69,9 +77,10 @@ export default function PrestadorDetailPage() {
 
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { token, isAuthenticated } = useAuthStore();
+  const { token, isAuthenticated, user } = useAuthStore();
   
   const [selectionToBook, setSelectionToBook] = useState<DateSelectArg | null>(null);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   
   const [modalInfo, setModalInfo] = useState<{ isOpen: boolean; title: string; description: string; type: 'success' | 'error' | 'info' }>({
     isOpen: false,
@@ -80,7 +89,9 @@ export default function PrestadorDetailPage() {
     type: 'info',
   });
 
-  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<CitaFormInputs>();
+  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<CitaFormInputs>({
+    resolver: zodResolver(citaSchema)
+  });
 
   const { data: profile, isLoading: isLoadingProfile, error: errorProfile } = useQuery({
     queryKey: ['prestadorProfile', id],
@@ -90,12 +101,20 @@ export default function PrestadorDetailPage() {
   const { data: disponibilidad, isLoading: isLoadingDisp, error: errorDisp } = useQuery({
     queryKey: ['prestadorDisponibilidad', id],
     queryFn: () => fetchPrestadorDisponibilidad(id),
+    retry: (failureCount, error) => {
+      if (axios.isAxiosError(error) && error.response?.status === 404) return false;
+      return failureCount < 3;
+    },
   });
 
   const { data: misCitas, isLoading: isLoadingCitas } = useQuery({
     queryKey: ['myCitas'],
     queryFn: () => fetchMyCitas(token),
     enabled: isAuthenticated,
+    retry: (failureCount, error) => {
+      if (axios.isAxiosError(error) && error.response?.status === 404) return false;
+      return failureCount < 3;
+    },
   });
 
   const createCitaMutation = useMutation({
@@ -122,6 +141,17 @@ export default function PrestadorDetailPage() {
     }
   });
 
+  const esMiPerfil = !!user && profile?.id_usuario.toString() === user.id;
+
+  // --- ¡AQUÍ ESTÁ LA LÓGICA DE REDIRECCIÓN! ---
+  useEffect(() => {
+    if (esMiPerfil) {
+      // Si soy yo, me redirige a mi calendario privado.
+      navigate('/calendario', { replace: true });
+    }
+  }, [esMiPerfil, navigate]);
+
+
   const dataForCalendar = useMemo((): EventInput[] => {
     const eventosDisponibles: EventInput[] = (disponibilidad || []).map((slot, index) => ({
       id: `slot-${index}`,
@@ -133,7 +163,6 @@ export default function PrestadorDetailPage() {
       className: "cursor-pointer"
     }));
 
-    // --- CORRECCIÓN: parseInt -> Number.parseInt ---
     const prestadorIdNum = Number.parseInt(id, 10);
     const eventosMisCitas: EventInput[] = (misCitas || [])
       .filter(cita => cita.id_prestador === prestadorIdNum)
@@ -155,6 +184,9 @@ export default function PrestadorDetailPage() {
   const handleDateSelect = (selectInfo: DateSelectArg) => {
     const calendarApi = selectInfo.view.calendar;
     calendarApi.unselect();
+
+    // Esta comprobación ahora es redundante por el useEffect, pero la dejamos por seguridad
+    if (esMiPerfil) return; 
 
     if (!isAuthenticated) {
       setModalInfo({
@@ -185,7 +217,6 @@ export default function PrestadorDetailPage() {
   const onCitaSubmit: SubmitHandler<CitaFormInputs> = (data) => {
     if (!selectionToBook) return;
     const payload: CreateCitaPayload = {
-      // --- CORRECCIÓN: parseInt -> Number.parseInt ---
       id_prestador: Number.parseInt(id, 10),
       fecha_hora_cita: selectionToBook.startStr,
       detalles: data.detalles,
@@ -196,7 +227,8 @@ export default function PrestadorDetailPage() {
 
   const isLoading = isLoadingProfile || isLoadingDisp || (isAuthenticated && isLoadingCitas);
 
-  if (isLoading) {
+  // Si está cargando O si va a redirigir, mostramos el spinner
+  if (isLoading || esMiPerfil) {
     return (
       <div className="flex justify-center items-center min-h-[50vh]">
         <FaSpinner className="animate-spin text-amber-400 text-4xl" />
@@ -208,6 +240,7 @@ export default function PrestadorDetailPage() {
     return <div className="p-8 text-center text-red-400">Error al cargar el perfil del prestador.</div>;
   }
 
+  // --- AHORA, esta página solo se renderiza si NO ES MI PERFIL ---
   return (
     <>
       <InfoDialog
@@ -217,7 +250,18 @@ export default function PrestadorDetailPage() {
         description={modalInfo.description}
         type={modalInfo.type}
       />
-    
+      
+      <Dialog open={!!lightboxImage} onOpenChange={(isOpen) => !isOpen && setLightboxImage(null)}>
+        <DialogContent className="bg-slate-900 border-slate-700 text-white max-w-3xl p-2">
+          <img src={lightboxImage || ''} alt="Foto de portafolio" className="rounded-md object-contain w-full max-h-[80vh]" />
+          <DialogFooter className="sm:justify-center">
+            <Button type="button" variant="secondary" onClick={() => setLightboxImage(null)}>
+              Cerrar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="p-4 sm:p-8">
         <div className="mx-auto max-w-6xl grid grid-cols-1 md:grid-cols-3 gap-8">
           
@@ -267,9 +311,14 @@ export default function PrestadorDetailPage() {
               <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-white mb-4">Portafolio</h3>
                 <div className="grid grid-cols-2 gap-2">
-                  {/* --- CORRECCIÓN: key={imgUrl} en lugar de key={index} --- */}
                   {profile.portafolio.map((imgUrl) => (
-                    <img key={imgUrl} src={imgUrl} alt="Foto de portafolio" className="rounded-md object-cover w-full h-24" />
+                    <button 
+                      key={imgUrl} 
+                      onClick={() => setLightboxImage(imgUrl)}
+                      className="focus:outline-none focus:ring-2 focus:ring-amber-400 rounded-md overflow-hidden"
+                    >
+                      <img src={imgUrl} alt="Foto de portafolio" className="object-cover w-full h-24" />
+                    </button>
                   ))}
                 </div>
               </div>
@@ -312,7 +361,7 @@ export default function PrestadorDetailPage() {
                     locale="es" buttonText={{ today: 'Hoy', week: 'Semana', day: 'Día' }}
                     timeZone="America/Santiago" slotMinTime="08:00:00" slotMaxTime="20:00:00"
                     allDaySlot={false} 
-                    selectOverlap={(event) => event.display === 'background'} 
+                    selectOverlap={false} 
                     eventOverlap={false} 
                   />
                 </div>
@@ -332,7 +381,6 @@ export default function PrestadorDetailPage() {
                         <span className="text-xs text-slate-400">{new Date(resena.fecha_creacion).toLocaleDateString('es-CL')}</span>
                       </div>
                       <div className="flex items-center gap-1 mt-1">
-                        {/* --- CORRECCIÓN: new Array() y key con prefijo --- */}
                         {[...new Array(5)].map((_, i) => (
                           <FaStar key={`star-${i}`} className={i < (resena.puntaje || 0) ? 'text-yellow-400' : 'text-slate-600'} />
                         ))}
@@ -344,6 +392,7 @@ export default function PrestadorDetailPage() {
               </div>
             </div>
           </div>
+
         </div>
 
         <Dialog open={!!selectionToBook} onOpenChange={(isOpen: boolean) => !isOpen && handleCloseModal()}>
@@ -362,8 +411,8 @@ export default function PrestadorDetailPage() {
                 <Label htmlFor="detalles" className="mb-1">Breve descripción del trabajo</Label>
                 <Textarea
                   id="detalles" rows={3}
-                  className={errors.detalles ? 'border-red-500' : ''}
-                  {...register("detalles", { required: "Este campo es obligatorio" })}
+                  className={`input-base ${errors.detalles ? 'border-red-500' : 'border-slate-700'}`}
+                  {...register("detalles")}
                   placeholder="Ej: Reparar filtración en lavaplatos..."
                 />
                 {errors.detalles && <p className="mt-1 text-sm text-red-400">{errors.detalles.message}</p>}
