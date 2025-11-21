@@ -28,7 +28,6 @@ export function ChatDashboard() {
   const [selectedChat, setSelectedChat] = useState<SelectedChat | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [forceReload, setForceReload] = useState(0); // Estado para forzar la recarga
 
   const token = useAuthStore((state) => state.token);
 
