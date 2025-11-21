@@ -28,12 +28,12 @@ const MobileNavLink: React.FC<{ to: string, children: React.ReactNode, onClick: 
   </NavLink>
 );
 
-const DesktopNavLink: React.FC<{ to: string, children: React.ReactNode, end?: boolean }> = ({ to, children, end }) => (
+const DesktopNavLink: React.FC<{ to: string, children: React.ReactNode, end?: boolean, className?: string }> = ({ to, children, end, className }) => (
   <NavLink
     to={to}
     end={end}
     className={({ isActive }) =>
-      `px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+      `${className ?? ''} px-3 py-2 rounded-md text-sm font-medium transition-colors ${
         isActive ? 'text-amber-400' : 'text-slate-300 hover:bg-slate-700 hover:text-white'
       }`
     }
@@ -90,6 +90,14 @@ export default function AppNavbar() {
             <div className="ml-10 flex items-center space-x-4">
               <DesktopNavLink to="/" end>Inicio</DesktopNavLink>
               <DesktopNavLink to="/prestadores">Buscar Prestadores</DesktopNavLink>
+              <DesktopNavLink 
+                  to="/mensajes" 
+                  className="font-bold text-cyan-400 hover:text-cyan-300 transition-colors flex items-center gap-2"
+                >
+                    Mensajes
+                </DesktopNavLink>
+          
+         
               
               {esAdmin && (
                 <DesktopNavLink to="/administrador">Admin</DesktopNavLink>

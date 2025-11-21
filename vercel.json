@@ -9,8 +9,8 @@
       "destination": "https://calendario-service-u5f6.onrender.com/:path*"
     },
     {
-      "source": "/api/chat/:path*",
-      "destination": "https://communication-service-akj6.onrender.com/chat/:path*"
+      "source": "/api/:path*",
+      "destination": "https://communication-service-akj6.onrender.com/:path*"
     },
     {
       "source": "/api/:path*",

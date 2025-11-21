@@ -1,0 +1,6 @@
+com.chambee.myapp.test.app-tracing-1.2.0-0 C:\Users\Bayron\.gradle\caches\8.11.1\transforms\33c3d677934d51554690bf2c5bc41ccf\transformed\tracing-1.2.0\res
+com.chambee.myapp.test.app-core-1.6.1-1 C:\Users\Bayron\.gradle\caches\8.11.1\transforms\7afad4c1293172ba26688bcabd1722c2\transformed\core-1.6.1\res
+com.chambee.myapp.test.app-androidTest-2 C:\Users\Bayron\Desktop\chambee\frontend\frontend\android\app\build\generated\res\resValues\androidTest\debug
+com.chambee.myapp.test.app-mergeDebugAndroidTestResources-3 C:\Users\Bayron\Desktop\chambee\frontend\frontend\android\app\build\intermediates\incremental\debugAndroidTest\mergeDebugAndroidTestResources\merged.dir
+com.chambee.myapp.test.app-mergeDebugAndroidTestResources-4 C:\Users\Bayron\Desktop\chambee\frontend\frontend\android\app\build\intermediates\incremental\debugAndroidTest\mergeDebugAndroidTestResources\stripped.dir
+com.chambee.myapp.test.app-debugAndroidTest-5 C:\Users\Bayron\Desktop\chambee\frontend\frontend\android\app\build\intermediates\merged_res\debugAndroidTest\mergeDebugAndroidTestResources

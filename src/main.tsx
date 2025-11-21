@@ -15,6 +15,7 @@ import PrestadorListPage from './pages/PrestadorListPage';
 import PrestadorDetailPage from './pages/PrestadorDetailPage';
 import ProviderCalendarPage from './pages/ProviderCalendarPage';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
+import { ChatDashboard } from './components/chat/ChatDashboard';
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ const router = createBrowserRouter([
       { path: '/prestadores/:id', element: <PrestadorDetailPage /> },
       { path: '/calendario', element: <ProviderCalendarPage /> },
       { path: '/administrador', element: <AdminDashboardPage /> },
+      { path: '/mensajes', element: <ChatDashboard /> },
     ]
   }
 ]);
