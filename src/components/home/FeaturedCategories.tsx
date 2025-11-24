@@ -15,7 +15,7 @@ const CATEGORIAS_NOMBRES = [
   "Jardinería", "Mecánica", "Plomería", "Cerrajería", 
   "Reparación de Electrodomésticos",
   "Instalación de Aire Acondicionado",
-  "Servicios de Limpieza", "Techado", "Otro"
+  "Servicios de Limpieza", "Techado", "Otros"
 ];
 
 const LOCAL_CATEGORIAS: Categoria[] = CATEGORIAS_NOMBRES.map((nombre, index) => ({
@@ -38,7 +38,7 @@ const categoryIcons: { [key: string]: React.ElementType } = {
   'instalación': FaWrench,
   'servicios': GiVacuumCleaner,
   'techado': MdRoofing,
-  'otro': MdMiscellaneousServices,
+  'otros': MdMiscellaneousServices,
 };
 
 const getIcon = (name: string | null | undefined) => {
