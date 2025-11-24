@@ -67,7 +67,7 @@ export function ChatDashboard() {
       return;
     }
     fetchContacts();
-  }, [token, fetchContacts, forceReload]); 
+  }, [token, fetchContacts]); 
 
   // --- RENDERIZADO ---
 
