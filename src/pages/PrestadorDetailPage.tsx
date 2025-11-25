@@ -27,7 +27,6 @@ import { Button } from '../components/ui/button';
 import { Textarea } from '../components/ui/textarea';
 import { Label } from '../components/ui/label';
 
-// --- ESQUEMAS ZOD ---
 const citaSchema = z.object({
   detalles: z.string().min(10, "Por favor, da más detalles del trabajo (mín. 10 caracteres)."),
   duracion_min: z.number().min(30, "La duración mínima es 30 min.").optional(), 
@@ -45,11 +44,10 @@ interface CitaDetail { id_cita: number; id_prestador: number; fecha_hora_cita: s
 interface BloquePublico { hora_inicio: string; hora_fin: string; estado: string; }
 interface CreateCitaPayload { id_prestador: number; fecha_hora_cita: string; duracion_min: number; detalles: string; }
 
-// --- API CONFIG ---
+// --- API ---
 const apiProveedores = axios.create({ baseURL: 'https://provider-service-mjuj.onrender.com' });
 const apiCalendario = axios.create({ baseURL: 'https://calendario-service-u5f6.onrender.com' });
 
-// --- FETCHERS ---
 const fetchPrestadorProfile = async (id: string) => (await apiProveedores.get<PrestadorPublicoDetalle>(`/prestadores/${id}`)).data;
 const fetchPrestadorDisponibilidad = async (id: string) => (await apiCalendario.get<BloquePublico[]>(`/prestadores/${id}/disponibilidad`)).data;
 const fetchMyCitas = async (token: string | null) => {
@@ -61,9 +59,8 @@ const createCita = async ({ payload, token }: { payload: CreateCitaPayload, toke
   return apiCalendario.post('/citas', payload, { headers: { Authorization: `Bearer ${token}` } });
 };
 
-// --- RENDERIZADO PERSONALIZADO (Small Text Fix) ---
+// --- RENDERIZADO PERSONALIZADO ---
 function renderEventContent(eventInfo: EventContentArg) {
-  // Si es background (disponible), no mostramos texto para mantenerlo limpio
   if (eventInfo.event.display === 'background') return <></>;
 
   return (
@@ -102,7 +99,6 @@ export default function PrestadorDetailPage() {
     enabled: !!id 
   });
 
-  // Aquí se captura 'errorDisp' para usarlo abajo
   const { data: disponibilidad, isLoading: isLoadingDisp, error: errorDisp } = useQuery({ 
     queryKey: ['prestadorDisponibilidad', id], 
     queryFn: () => fetchPrestadorDisponibilidad(id), 
@@ -129,35 +125,52 @@ export default function PrestadorDetailPage() {
   const esMiPerfil = !!user && profile?.id_usuario.toString() === user.id;
   useEffect(() => { if (esMiPerfil) navigate('/calendario', { replace: true }); }, [esMiPerfil, navigate]);
 
+  // --- LÓGICA DE CALENDARIO SIN DUPLICADOS ---
   const dataForCalendar = useMemo((): EventInput[] => {
-    const eventosDisponibilidad: EventInput[] = (disponibilidad || []).map((slot, index) => {
-      const esDisponible = slot.estado.toLowerCase() === 'disponible';
-      return {
-        id: `slot-${index}`,
-        display: esDisponible ? 'background' : 'block',
-        title: esDisponible ? '' : 'Ocupado',
-        start: slot.hora_inicio,
-        end: slot.hora_fin,
-        backgroundColor: esDisponible ? '#10b981' : '#475569',
-        className: esDisponible ? "cursor-pointer opacity-40 hover:opacity-60" : "cursor-not-allowed opacity-80",
-        extendedProps: { tipo: 'slot', estado: slot.estado }
-      };
-    });
-
     const prestadorIdNum = Number.parseInt(id, 10);
-    const eventosMisCitas: EventInput[] = (misCitas || [])
+    
+    // 1. Procesamos Mis Citas primero
+    const misEventos = (misCitas || [])
       .filter(cita => cita.id_prestador === prestadorIdNum)
       .map(cita => ({
         id: `cita-${cita.id_cita}`,
         title: `Mi Cita (${cita.estado})`,
         start: cita.fecha_hora_cita,
+        // Si el backend no envía fin, asumimos 1 hora para visualización correcta
+        end: new Date(new Date(cita.fecha_hora_cita).getTime() + 60 * 60000).toISOString(),
         backgroundColor: '#f59e0b',
         borderColor: '#d97706',
         className: "z-10 shadow-md",
         extendedProps: { tipo: 'micita' }
       }));
 
-    return [...eventosDisponibilidad, ...eventosMisCitas];
+    // 2. Creamos un Set con las horas de inicio de mis citas para filtrar duplicados
+    // Convertimos a string ISO exacto para comparar
+    const misHorariosOcupados = new Set(misEventos.map(e => new Date(e.start as string).toISOString()));
+
+    // 3. Procesamos la Disponibilidad del Proveedor
+    const eventosDisponibilidad = (disponibilidad || [])
+        .filter(slot => {
+            // FILTRO MÁGICO: Si este bloque empieza a la misma hora que una de mis citas,
+            // NO lo mostramos (porque mi cita es más importante y ya sale arriba).
+            const slotStartIso = new Date(slot.hora_inicio).toISOString();
+            return !misHorariosOcupados.has(slotStartIso);
+        })
+        .map((slot, index) => {
+            const esDisponible = slot.estado.toLowerCase() === 'disponible';
+            return {
+                id: `slot-${index}`,
+                display: esDisponible ? 'background' : 'block',
+                title: esDisponible ? '' : 'Ocupado',
+                start: slot.hora_inicio,
+                end: slot.hora_fin,
+                backgroundColor: esDisponible ? '#10b981' : '#475569',
+                className: esDisponible ? "cursor-pointer opacity-40 hover:opacity-60" : "cursor-not-allowed opacity-80",
+                extendedProps: { tipo: 'slot', estado: slot.estado }
+            };
+        });
+
+    return [...eventosDisponibilidad, ...misEventos];
   }, [disponibilidad, misCitas, id]);
 
   const handleDateSelect = (selectInfo: DateSelectArg) => {
@@ -166,6 +179,8 @@ export default function PrestadorDetailPage() {
     if (!isAuthenticated) { setModalInfo({ isOpen: true, title: 'Acción Requerida', description: 'Inicia sesión para agendar.', type: 'info' }); return; }
     
     const allEvents = selectInfo.view.calendar.getEvents();
+    
+    // Validación: DENTRO de verde, FUERA de sólido
     const bloqueDisponible = allEvents.find(e => e.extendedProps.tipo === 'slot' && e.extendedProps.estado === 'disponible' && e.start && e.end && e.start <= selectInfo.start && e.end >= selectInfo.end);
     const conflicto = allEvents.find(e => e.extendedProps.tipo !== 'slot' && e.start && e.end && selectInfo.start < e.end && selectInfo.end > e.start);
 
@@ -191,15 +206,9 @@ export default function PrestadorDetailPage() {
     <>
       <InfoDialog isOpen={modalInfo.isOpen} onClose={handleCloseInfoModal} title={modalInfo.title} description={modalInfo.description} type={modalInfo.type} />
       
-      {/* LIGHTBOX (Imagen Ampliada) - Corrección de ALT */}
       <Dialog open={!!lightboxImage} onOpenChange={(o) => !o && setLightboxImage(null)}>
         <DialogContent className="bg-slate-900 border-slate-700 max-w-3xl p-1">
-          {/* CORREGIDO: Agregado alt significativo */}
-          <img 
-            src={lightboxImage || ''} 
-            alt="Vista ampliada del portafolio" 
-            className="w-full max-h-[80vh] object-contain rounded" 
-          />
+          <img src={lightboxImage || ''} alt="Vista ampliada" className="w-full max-h-[80vh] object-contain rounded" />
           <Button variant="ghost" className="absolute top-2 right-2 text-white bg-black/50 hover:bg-black/70" onClick={() => setLightboxImage(null)}>X</Button>
         </DialogContent>
       </Dialog>
@@ -230,14 +239,14 @@ export default function PrestadorDetailPage() {
                 <div className="flex flex-wrap gap-2">{(profile.oficios || []).map(c => <span key={c} className="bg-slate-800 text-cyan-300 text-xs px-2 py-1 rounded border border-slate-700">{c}</span>)}</div>
             </div>
 
-            {/* PORTAFOLIO (Corrección ALT) */}
+            {/* PORTAFOLIO */}
             {profile.portafolio.length > 0 && (
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
                 <h3 className="text-xs font-bold text-slate-500 uppercase mb-4">Portafolio</h3>
                 <div className="grid grid-cols-2 gap-2">
                   {profile.portafolio.map((imgUrl, idx) => (
                     <button key={imgUrl} onClick={() => setLightboxImage(imgUrl)} className="focus:outline-none focus:ring-2 focus:ring-amber-400 rounded-md overflow-hidden">
-                      <img src={imgUrl} alt={`Trabajo portafolio ${idx + 1}`} className="object-cover w-full h-24 hover:opacity-80 transition-opacity" />
+                      <img src={imgUrl} alt={`Trabajo ${idx + 1}`} className="object-cover w-full h-24 hover:opacity-80 transition-opacity" />
                     </button>
                   ))}
                 </div>
@@ -253,11 +262,9 @@ export default function PrestadorDetailPage() {
                 <p className="text-slate-400 text-sm mt-1">Haz clic o arrastra sobre los bloques <span className="text-emerald-400 font-bold">verdes</span> para solicitar una hora.</p>
               </div>
               
-              {/* CORREGIDO: Uso explícito de errorDisp */}
               {errorDisp ? (
                 <div className="p-6 bg-red-900/20 border border-red-800 rounded-lg text-center">
                   <p className="text-red-400 font-bold">No se pudo cargar la disponibilidad.</p>
-                  <p className="text-red-300 text-xs mt-1">Intenta recargar la página.</p>
                 </div>
               ) : (
                 <div className="p-4 bg-white rounded-xl shadow-xl text-slate-900 overflow-hidden border border-slate-200">
@@ -268,7 +275,7 @@ export default function PrestadorDetailPage() {
                     selectable={true} selectMirror={true} select={handleDateSelect}
                     locale={esLocale} slotMinTime="08:00:00" slotMaxTime="20:00:00" allDaySlot={false}
                     selectOverlap={true} eventOverlap={false} slotDuration="00:30:00"
-                    eventContent={renderEventContent} // Usa el renderizado de texto pequeño
+                    eventContent={renderEventContent}
                   />
                 </div>
               )}
