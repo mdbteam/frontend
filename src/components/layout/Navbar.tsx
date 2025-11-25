@@ -1,232 +1,177 @@
-import { NavLink, Link, useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../../store/authStore';
-import { FaBars, FaTimes } from 'react-icons/fa';
-import { User, LogOut, Calendar, UserCheck, FileText, Briefcase } from 'lucide-react'; 
 import { useState } from 'react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '../ui/dropdown-menu';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../../store/authStore';
+import { Menu, X, MessageSquare, User, LogOut, Search, LayoutGrid } from 'lucide-react';
+import { Button } from '../ui/button';
 
-const MobileNavLink: React.FC<{ to: string, children: React.ReactNode, onClick: () => void, end?: boolean }> = ({ to, children, onClick, end }) => (
-  <NavLink
-    to={to}
-    end={end}
-    className={({ isActive }) =>
-      `block px-3 py-2 rounded-md text-base font-medium ${
-        isActive ? 'bg-amber-500 text-slate-900' : 'text-slate-300 hover:bg-slate-700 hover:text-white'
-      }`
-    }
-    onClick={onClick}
-  >
-    {children}
-  </NavLink>
-);
-
-const DesktopNavLink: React.FC<{ to: string, children: React.ReactNode, end?: boolean }> = ({ to, children, end }) => (
-  <NavLink
-    to={to}
-    end={end}
-    className={({ isActive }) =>
-      `px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-        isActive ? 'text-amber-400' : 'text-slate-300 hover:bg-slate-700 hover:text-white'
-      }`
-    }
-  >
-    {children}
-  </NavLink>
-);
-
-const UserAvatar: React.FC<{ user: { foto_url?: string | null, nombres?: string | null } | null }> = ({ user }) => {
-  const fallbackInitial = user?.nombres ? user.nombres.charAt(0).toUpperCase() : <User size={18} />;
-  
-  return (
-    <div className="h-8 w-8 rounded-full bg-slate-700 flex items-center justify-center text-slate-300 font-medium overflow-hidden">
-      {user?.foto_url ? (
-        <img src={user.foto_url} alt="Perfil" className="h-full w-full object-cover" />
-      ) : (
-        <span>{fallbackInitial}</span>
-      )}
-    </div>
-  );
-};
-
-
-export default function AppNavbar() {
-  const [isOpen, setIsOpen] = useState(false);
+// 👇 OPCIÓN B: Exportación por defecto para que AppLayout no falle
+export default function Navbar() {
   const { isAuthenticated, user, logout } = useAuthStore();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const location = useLocation();
   const navigate = useNavigate();
 
   const handleLogout = () => {
     logout();
-    setIsOpen(false);
-    navigate('/');
+    setIsMobileMenuOpen(false);
+    navigate('/login');
   };
 
-  const closeMenu = () => setIsOpen(false);
-
-  const esAdmin = isAuthenticated && user && user.rol.toLowerCase().trim() === 'administrador';
-  const esPrestador = isAuthenticated && user && user.rol.toLowerCase().trim() === 'prestador';
-  const esCliente = isAuthenticated && user && user.rol.toLowerCase().trim() === 'cliente';
-
+  const getLinkClass = (path: string) => 
+    `flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+      location.pathname === path 
+        ? 'text-cyan-400 bg-slate-800' 
+        : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+    }`;
 
   return (
-    <nav className="bg-slate-800/80 backdrop-blur-md shadow-md sticky top-0 z-40 border-b border-slate-700">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between">
+    <nav className="bg-slate-950 border-b border-slate-800 sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between h-16">
           
-          <div className="flex-shrink-0">
-            <Link to="/" className="text-2xl font-bold text-amber-400 font-poppins">
-              Cham<span className="text-white">Bee</span>
+          <div className="flex items-center">
+            <Link to="/" className="flex-shrink-0 flex items-center gap-2">
+              <img src="/assets/logo.jpg" alt="Chambee Logo" className="h-8 w-auto" />
+              <span className="text-white font-bold text-xl tracking-tight">Chambee</span>
             </Link>
           </div>
 
-          <div className="hidden md:block">
-            <div className="ml-10 flex items-center space-x-4">
-              <DesktopNavLink to="/" end>Inicio</DesktopNavLink>
-              <DesktopNavLink to="/prestadores">Buscar Prestadores</DesktopNavLink>
-              
-              {esAdmin && (
-                <DesktopNavLink to="/administrador">Admin</DesktopNavLink>
-              )}
-              
-              {isAuthenticated ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button 
-                      type="button" 
-                      aria-label="Abrir menú de usuario"
-                      className="rounded-full focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-slate-800"
-                    >
-                      <UserAvatar user={user} />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-56" align="end">
-                    <DropdownMenuLabel>
-                      <div className="font-medium text-white">{user?.nombres}</div>
-                      <div className="text-xs text-slate-400 font-normal capitalize">{user?.rol}</div>
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuGroup>
-                      
-                      {/* --- ¡AQUÍ ESTÁN LAS CORRECCIONES! --- */}
-                      
-                      <DropdownMenuItem onClick={() => navigate('/perfil?tab=perfil')}>
-                        <User className="mr-2 h-4 w-4" />
-                        <span>Mi Perfil</span>
-                      </DropdownMenuItem>
-                      
-                      {(esCliente || esPrestador) && (
-                        <DropdownMenuItem onClick={() => navigate('/perfil?tab=citas')}>
-                          <UserCheck className="mr-2 h-4 w-4" />
-                          <span>Mis Citas</span>
-                        </DropdownMenuItem>
-                      )}
-                      
-                      {esPrestador && (
-                        <>
-                          <DropdownMenuItem onClick={() => navigate('/perfil?tab=experiencia')}>
-                            <Briefcase className="mr-2 h-4 w-4" />
-                            <span>Mi Experiencia</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => navigate('/calendario')}>
-                            <Calendar className="mr-2 h-4 w-4" />
-                            <span>Mi Agenda</span>
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                      
-                      {esCliente && (
-                        <DropdownMenuItem onClick={() => navigate('/postular')}>
-                          <FileText className="mr-2 h-4 w-4" />
-                          <span>Postular como Prestador</span>
-                        </DropdownMenuItem>
-                      )}
-                    </DropdownMenuGroup>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleLogout} className="text-red-400 focus:bg-red-900/50 focus:text-red-300">
-                      <LogOut className="mr-2 h-4 w-4" />
-                      <span>Cerrar Sesión</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                <DesktopNavLink to="/login">Iniciar Sesión</DesktopNavLink>
-              )}
-            </div>
+          {/* --- MENÚ DESKTOP --- */}
+          <div className="hidden md:flex items-center space-x-4">
+            <Link to="/" className={getLinkClass('/')}>
+              <LayoutGrid size={18} />
+              Inicio
+            </Link>
+            <Link to="/prestadores" className={getLinkClass('/prestadores')}>
+              <Search size={18} />
+              Buscar Expertos
+            </Link>
+            
+            {/* Solo mostrar Mensajes si está logueado */}
+            {isAuthenticated && (
+              <Link to="/mensajes" className={getLinkClass('/mensajes')}>
+                <MessageSquare size={18} />
+                Mensajes
+              </Link>
+            )}
           </div>
 
-          <div className="-mr-2 flex md:hidden">
+          {/* --- MENÚ DERECHA (AUTH) --- */}
+          <div className="hidden md:flex items-center gap-4">
+            {isAuthenticated ? (
+              <div className="flex items-center gap-4">
+                <Link to="/perfil" className="flex items-center gap-2 text-sm text-slate-300 hover:text-white transition-colors">
+                  <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700 text-cyan-400 font-bold overflow-hidden">
+                    {user?.foto_url ? (
+                      <img src={user.foto_url} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      user?.nombres?.[0] || <User size={16} />
+                    )}
+                  </div>
+                  <span className="font-medium hidden lg:block">{user?.nombres}</span>
+                </Link>
+
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={handleLogout}
+                  className="text-red-400 hover:text-red-300 hover:bg-red-900/20"
+                >
+                  <LogOut size={18} />
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <Link to="/login">
+                  <Button variant="ghost" className="text-slate-300 hover:text-white">
+                    Iniciar Sesión
+                  </Button>
+                </Link>
+                <Link to="/registro">
+                  <Button className="bg-cyan-600 hover:bg-cyan-500 text-white border-none">
+                    Regístrate
+                  </Button>
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {/* --- BOTÓN MÓVIL --- */}
+          <div className="flex items-center md:hidden">
             <button
-              onClick={() => setIsOpen(!isOpen)}
-              type="button"
-              className="inline-flex items-center justify-center rounded-md bg-slate-700 p-2 text-slate-300 hover:bg-slate-600 hover:text-white"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="text-slate-400 hover:text-white p-2"
             >
-              <span className="sr-only">Abrir menú</span>
-              {isOpen ? <FaTimes className="block h-6 w-6" /> : <FaBars className="block h-6 w-6" />}
+              {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
           </div>
         </div>
       </div>
 
-      {/* --- MENÚ MÓVIL (TAMBIÉN CORREGIDO) --- */}
-      <div className={`${isOpen ? 'block' : 'hidden'} md:hidden border-t border-slate-700`} id="mobile-menu">
-        {isAuthenticated && user && (
-          <div className="px-5 pt-4 pb-3 border-b border-slate-700">
-            <div className="flex items-center gap-3">
-              <UserAvatar user={user} />
-              <div>
-                <div className="text-base font-medium text-white">{user.nombres}</div>
-                <div className="text-sm font-medium text-slate-400 capitalize">{user.rol}</div>
-              </div>
+      {/* --- MENÚ MÓVIL --- */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden bg-slate-900 border-b border-slate-800">
+          <div className="px-2 pt-2 pb-3 space-y-1">
+            <Link 
+              to="/" 
+              className={getLinkClass('/') + " block"} 
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <LayoutGrid size={18} /> Inicio
+            </Link>
+            <Link 
+              to="/prestadores" 
+              className={getLinkClass('/prestadores') + " block"} 
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <Search size={18} /> Buscar Expertos
+            </Link>
+
+            {isAuthenticated && (
+              <Link 
+                to="/mensajes" 
+                className={getLinkClass('/mensajes') + " block"} 
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <MessageSquare size={18} /> Mensajes
+              </Link>
+            )}
+
+            <div className="border-t border-slate-800 my-2 pt-2">
+              {isAuthenticated ? (
+                <>
+                  <Link 
+                    to="/perfil" 
+                    className="flex items-center gap-2 px-3 py-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-md"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <User size={18} /> Mi Perfil ({user?.nombres})
+                  </Link>
+                  <button 
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-red-400 hover:bg-red-900/20 rounded-md mt-1"
+                  >
+                    <LogOut size={18} /> Cerrar Sesión
+                  </button>
+                </>
+              ) : (
+                <div className="flex flex-col gap-2 px-3">
+                  <Link to="/login" onClick={() => setIsMobileMenuOpen(false)}>
+                    <Button variant="ghost" className="w-full justify-start text-slate-300">
+                      Iniciar Sesión
+                    </Button>
+                  </Link>
+                  <Link to="/registro" onClick={() => setIsMobileMenuOpen(false)}>
+                    <Button className="w-full bg-cyan-600 hover:bg-cyan-500 text-white">
+                      Regístrate Gratis
+                    </Button>
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
-        )}
-        
-        <div className="space-y-1 px-2 pb-3 pt-2 sm:px-3">
-          <MobileNavLink to="/" onClick={closeMenu} end>Inicio</MobileNavLink>
-          <MobileNavLink to="/prestadores" onClick={closeMenu}>Buscar Prestadores</MobileNavLink>
-          
-          {esAdmin && (
-            <MobileNavLink to="/administrador" onClick={closeMenu}>Admin</MobileNavLink>
-          )}
-
-          {isAuthenticated ? (
-            <>
-              <MobileNavLink to="/perfil?tab=perfil" onClick={closeMenu} end>Mi Perfil</MobileNavLink>
-              
-              {(esCliente || esPrestador) && (
-                <MobileNavLink to="/perfil?tab=citas" onClick={closeMenu}>Mis Citas</MobileNavLink>
-              )}
-
-              {esPrestador && (
-                <>
-                  <MobileNavLink to="/perfil?tab=experiencia" onClick={closeMenu}>Mi Experiencia</MobileNavLink>
-                  <MobileNavLink to="/calendario" onClick={closeMenu}>Mi Agenda</MobileNavLink>
-                </>
-              )}
-              
-              {esCliente && (
-                <MobileNavLink to="/postular" onClick={closeMenu}>Postular</MobileNavLink>
-              )}
-
-              <button
-                onClick={handleLogout}
-                className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:bg-slate-700 hover:text-white"
-              >
-                Cerrar Sesión
-              </button>
-            </>
-          ) : (
-            <MobileNavLink to="/login" onClick={closeMenu}>Iniciar Sesión</MobileNavLink>
-          )}
         </div>
-      </div>
+      )}
     </nav>
   );
 }

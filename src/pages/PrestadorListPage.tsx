@@ -1,132 +1,128 @@
-import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import axios from 'axios';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { FaSpinner, FaSearch } from 'react-icons/fa';
-import { PrestadorCard } from '../components/prestadores/PrestadorCard'; 
+import axios from 'axios';
+import { Search } from 'lucide-react';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { PrestadorCard } from '../components/prestadores/PrestadorCard';
 
-interface Prestador {
-  id: string;
+
+interface PrestadorResumen {
+  id?: number;          
+  id_usuario?: number; 
   nombres: string;
   primer_apellido: string;
   foto_url: string | null;
-  oficios: string[]; 
-  resumen: string | null; 
-  puntuacion: number | null;
+  oficios: string[];
+  puntuacion_promedio: number;
+  resumen?: string;
 }
 
-const normalizeString = (str: string | null) => {
-  if (!str) return null;
-  return str
-    .toLowerCase()
-    .normalize("NFD") 
-    .replace(/[\u0300-\u036f]/g, "");
-};
+const apiProveedores = axios.create({
+  baseURL: 'https://provider-service-mjuj.onrender.com',
+});
 
 const fetchPrestadores = async (categoria: string | null, searchTerm: string) => {
-  const categoriaNormalizada = normalizeString(categoria);
-  
-  const { data } = await axios.get<Prestador[]>('/api/prestadores', {
+  const { data } = await apiProveedores.get<PrestadorResumen[]>('/prestadores', {
     params: {
       q: searchTerm || undefined,
-      categoria: categoriaNormalizada || undefined,
-    }
+      categoria: categoria || undefined,
+    },
   });
   return data;
 };
 
 export default function PrestadorListPage() {
-  const [searchParams] = useSearchParams();
-  
-  // --- ¡AQUÍ ESTÁ LA CORRECCIÓN! ---
-  // Leemos "categoria" (lo que envía el Chatbot y el Home)
-  const categoriaFromUrl = searchParams.get('categoria'); 
-
   const [searchTerm, setSearchTerm] = useState('');
-  const [categoriaFilter, setCategoriaFilter] = useState(categoriaFromUrl || null);
-
-  useEffect(() => {
-    // Sincronizamos si la URL cambia
-    setCategoriaFilter(searchParams.get('categoria')); 
-  }, [searchParams]);
+  const [categoriaFilter, setCategoriaFilter] = useState<string | null>(null);
 
   const { data: prestadores, isLoading, error } = useQuery({
     queryKey: ['prestadores', categoriaFilter, searchTerm],
     queryFn: () => fetchPrestadores(categoriaFilter, searchTerm),
   });
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
   };
 
   return (
-    <div className="p-4 sm:p-8">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold text-white font-poppins [text-shadow:0_0_15px_rgba(34,211,238,0.4)]">
-            Encuentra tu Agente
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans">
+      
+      {/* Hero Section con Buscador */}
+      <section className="relative py-20 px-4 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-cyan-900/20 to-slate-950 z-0" />
+        <div className="max-w-5xl mx-auto relative z-10 text-center">
+          <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500">
+            Encuentra Expertos
           </h1>
-          <p className="mt-2 text-lg text-slate-300">
-            Busca profesionales calificados para el trabajo que necesitas.
+          <p className="text-xl text-slate-400 mb-10 max-w-2xl mx-auto">
+            Conectamos tus necesidades con profesionales calificados y verificados.
           </p>
-          <div className="mt-6 max-w-lg mx-auto">
-            <div className="relative">
-              <input
-                type="text"
-                value={searchTerm} 
-                onChange={handleSearchChange}
-                placeholder="Buscar por oficio o nombre (Ej: Plomero)"
-                className="w-full px-5 py-3 pr-12 rounded-full bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+
+          <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-4 max-w-2xl mx-auto">
+            <div className="relative flex-grow">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500" />
+              <Input 
+                type="text" 
+                placeholder="¿Qué servicio buscas? (Ej: Gasfitería)" 
+                className="pl-10 bg-slate-900/80 border-slate-700 h-12 text-lg focus:ring-cyan-500"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
-              <div className="absolute inset-y-0 right-0 pr-5 flex items-center pointer-events-none">
-                <FaSearch className="text-slate-400" />
-              </div>
             </div>
-            
-            {categoriaFilter && (
-              <p className="mt-3 text-sm text-slate-400">
-                Filtrando por: <span className="font-semibold text-amber-400">{categoriaFilter}</span>
-              </p>
-            )}
+            <Button type="submit" className="h-12 px-8 bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-lg">
+              Buscar
+            </Button>
+          </form>
+        </div>
+      </section>
+
+      {/* Listado */}
+      <main className="max-w-7xl mx-auto px-4 pb-20">
+        
+        {isLoading && (
+          <div className="flex justify-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500"></div>
           </div>
+        )}
+
+        {error && (
+          <div className="bg-red-900/20 border border-red-800 text-red-200 p-6 rounded-lg text-center">
+            <p>Ocurrió un error al cargar los profesionales.</p>
+          </div>
+        )}
+
+        {!isLoading && !error && prestadores?.length === 0 && (
+          <div className="text-center py-20 bg-slate-900/50 rounded-xl border border-slate-800">
+            <p className="text-slate-400 text-lg">No se encontraron resultados para tu búsqueda.</p>
+            <Button variant="link" onClick={() => { setSearchTerm(''); setCategoriaFilter(null); }} className="mt-4 text-cyan-400">
+              Ver todos
+            </Button>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {prestadores?.map((prestador, index) => {
+            // 🛡️ LÓGICA DE PROTECCIÓN (Aquí estaba el error)
+            // Buscamos 'id', si no existe 'id_usuario', y si no el índice.
+            const idSeguro = prestador.id || prestador.id_usuario || `temp-${index}`;
+            
+            return (
+              <PrestadorCard 
+                key={idSeguro.toString()} // .toString() ahora es seguro
+                id={idSeguro.toString()}
+                nombres={prestador.nombres || 'Profesional'}
+                primer_apellido={prestador.primer_apellido || ''}
+                fotoUrl={prestador.foto_url || 'https://via.placeholder.com/150'}
+                oficio={prestador.oficios?.[0] || 'General'}
+                resumen={prestador.resumen || `Experto en ${prestador.oficios?.[0] || 'servicios'}`}
+                puntuacion={prestador.puntuacion_promedio || 0}
+              />
+            );
+          })}
         </div>
 
-        <div>
-          {isLoading && (
-            <div className="flex justify-center items-center min-h-[30vh]">
-              <FaSpinner className="animate-spin text-cyan-400 text-4xl" />
-            </div>
-          )}
-          {error && (
-            <div className="p-8 text-center text-red-400 bg-slate-800/50 rounded-lg">
-              <p>Error al cargar los prestadores. Intenta de nuevo más tarde.</p>
-            </div>
-          )}
-          {prestadores && prestadores.length === 0 && (
-            <div className="p-8 text-center text-slate-400 bg-slate-800/50 rounded-lg">
-              <p>No se encontraron prestadores que coincidan con tu búsqueda.</p>
-            </div>
-          )}
-          {prestadores && prestadores.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              
-              {prestadores.map((prestador) => (
-                <PrestadorCard
-                  key={prestador.id}
-                  id={prestador.id}
-                  nombres={prestador.nombres}
-                  primer_apellido={prestador.primer_apellido}
-                  fotoUrl={prestador.foto_url || `https://ui-avatars.com/api/?name=${prestador.nombres}+${prestador.primer_apellido}&background=0A0A0A&color=FFF`}
-                  oficio={prestador.oficios?.[0] || 'Profesional'}
-                  resumen={prestador.resumen || 'Sin resumen disponible.'}
-                  puntuacion={prestador.puntuacion || 0}
-                />
-              ))}
-
-            </div>
-          )}
-        </div>
-      </div>
+      </main>
     </div>
   );
 }
