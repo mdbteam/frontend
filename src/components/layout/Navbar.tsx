@@ -4,7 +4,6 @@ import { useAuthStore } from '../../store/authStore';
 import { Menu, X, MessageSquare, User, LogOut, Search, LayoutGrid } from 'lucide-react';
 import { Button } from '../ui/button';
 
-// 👇 OPCIÓN B: Exportación por defecto para que AppLayout no falle
 export default function Navbar() {
   const { isAuthenticated, user, logout } = useAuthStore();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -29,14 +28,16 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           
+          {/* --- LOGO --- */}
           <div className="flex items-center">
             <Link to="/" className="flex-shrink-0 flex items-center gap-2">
+              {/* Ruta corregida del logo */}
               <img src="/assets/logo.jpg" alt="Chambee Logo" className="h-8 w-auto" />
               <span className="text-white font-bold text-xl tracking-tight">Chambee</span>
             </Link>
           </div>
 
-          {/* --- MENÚ DESKTOP --- */}
+          {/* --- MENÚ DESKTOP (CENTRO) --- */}
           <div className="hidden md:flex items-center space-x-4">
             <Link to="/" className={getLinkClass('/')}>
               <LayoutGrid size={18} />
@@ -47,7 +48,6 @@ export default function Navbar() {
               Buscar Expertos
             </Link>
             
-            {/* Solo mostrar Mensajes si está logueado */}
             {isAuthenticated && (
               <Link to="/mensajes" className={getLinkClass('/mensajes')}>
                 <MessageSquare size={18} />
@@ -81,14 +81,22 @@ export default function Navbar() {
                 </Button>
               </div>
             ) : (
+              // 👇 AQUÍ ESTÁ LA CORRECCIÓN DE UX/COLORES
               <div className="flex items-center gap-3">
                 <Link to="/login">
-                  <Button variant="ghost" className="text-slate-300 hover:text-white">
+                  <Button 
+                    variant="ghost" 
+                    // CORRECCIÓN: hover:bg-slate-800 asegura que el fondo sea oscuro al pasar el mouse
+                    className="text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+                  >
                     Iniciar Sesión
                   </Button>
                 </Link>
                 <Link to="/registro">
-                  <Button className="bg-cyan-600 hover:bg-cyan-500 text-white border-none">
+                  <Button 
+                    // CTA (Call to Action) destacado
+                    className="bg-cyan-600 hover:bg-cyan-500 text-white border-none font-semibold shadow-lg shadow-cyan-900/20 transition-all hover:scale-105"
+                  >
                     Regístrate
                   </Button>
                 </Link>
@@ -110,7 +118,7 @@ export default function Navbar() {
 
       {/* --- MENÚ MÓVIL --- */}
       {isMobileMenuOpen && (
-        <div className="md:hidden bg-slate-900 border-b border-slate-800">
+        <div className="md:hidden bg-slate-900 border-b border-slate-800 animate-in slide-in-from-top-5 duration-200">
           <div className="px-2 pt-2 pb-3 space-y-1">
             <Link 
               to="/" 
@@ -155,14 +163,17 @@ export default function Navbar() {
                   </button>
                 </>
               ) : (
-                <div className="flex flex-col gap-2 px-3">
+                <div className="flex flex-col gap-3 px-3 pt-2 pb-4">
                   <Link to="/login" onClick={() => setIsMobileMenuOpen(false)}>
-                    <Button variant="ghost" className="w-full justify-start text-slate-300">
+                    <Button 
+                        variant="ghost" 
+                        className="w-full justify-start text-slate-300 hover:text-white hover:bg-slate-800"
+                    >
                       Iniciar Sesión
                     </Button>
                   </Link>
                   <Link to="/registro" onClick={() => setIsMobileMenuOpen(false)}>
-                    <Button className="w-full bg-cyan-600 hover:bg-cyan-500 text-white">
+                    <Button className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold">
                       Regístrate Gratis
                     </Button>
                   </Link>
