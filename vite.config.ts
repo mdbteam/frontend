@@ -5,6 +5,12 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
+      '/api/chatbot': {
+        target: 'https://ai-search-service-3a39.onrender.com', 
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''), 
+      },
+
       '/api/auth': {
         target: 'https://auth-service-1-8301.onrender.com',
         changeOrigin: true,

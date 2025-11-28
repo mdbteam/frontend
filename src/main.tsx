@@ -34,6 +34,7 @@ const router = createBrowserRouter([
       { path: '/calendario', element: <ProviderCalendarPage /> },
       { path: '/administrador', element: <AdminDashboardPage /> },
       { path: '/mensajes', element: <ChatDashboard /> },
+      { path: '/mensajes/:userId', element: <ChatDashboard /> },
     ]
   }
 ]);

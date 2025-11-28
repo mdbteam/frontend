@@ -1,10 +1,14 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { useForm } from 'react-hook-form'; // 👈 Se eliminó SubmitHandler
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { FaSpinner, FaStar, FaClock, FaCheckCircle, FaBan, FaUser } from 'react-icons/fa';
+import { Link } from 'react-router-dom'; // 👈 Importamos Link para navegación
+import { 
+  FaSpinner, FaStar, FaClock, FaCheckCircle, 
+  FaBan, FaUser, FaCommentDots 
+} from 'react-icons/fa'; // 👈 Agregamos FaCommentDots
 
 import { useAuthStore } from '../../store/authStore';
 import { Button } from '../ui/button';
@@ -25,7 +29,7 @@ import { Label } from '../ui/label';
 const apiCalendario = axios.create({ baseURL: 'https://calendario-service-u5f6.onrender.com' });
 const apiProveedores = axios.create({ baseURL: 'https://provider-service-mjuj.onrender.com' });
 
-// --- TIPOS DE DATOS ---
+// --- TIPOS ---
 interface CitaDetail {
   id_cita: number;
   id_cliente: number;
@@ -40,7 +44,6 @@ interface CitaDetail {
   id_valoracion: number | null;
 }
 
-// --- TIPOS PARA PROPS DE COMPONENTES (Adiós 'any') ---
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -55,7 +58,7 @@ interface RateTrabajoProps extends ModalProps {
   trabajoId: number;
 }
 
-// --- SCHEMAS ZOD ---
+// --- SCHEMAS ---
 const trabajoSchema = z.object({
   descripcion: z.string().min(10, "La descripción es requerida (mín. 10 caracteres)"),
   condiciones: z.string().optional().nullable(),
@@ -80,33 +83,31 @@ const fetchMyCitas = async (token: string | null) => {
 
 // --- COMPONENTES AUXILIARES ---
 
-// Badge de Estado
 function CitaStatusBadge({ cita }: { cita: CitaDetail }) {
   if (cita.estado_trabajo) {
-    let colorClass = "bg-blue-100 text-blue-800 border-blue-200";
+    let colorClass = "bg-blue-900/30 text-blue-300 border-blue-800";
     let label = `Trabajo: ${cita.estado_trabajo}`;
 
     switch (cita.estado_trabajo.toLowerCase()) {
-      case 'aceptado': colorClass = "bg-indigo-100 text-indigo-800 border-indigo-200"; label = "En Progreso"; break;
-      case 'finalizado': colorClass = "bg-purple-100 text-purple-800 border-purple-200"; label = "Finalizado"; break;
+      case 'aceptado': colorClass = "bg-indigo-900/30 text-indigo-300 border-indigo-800"; label = "En Progreso"; break;
+      case 'finalizado': colorClass = "bg-purple-900/30 text-purple-300 border-purple-800"; label = "Finalizado"; break;
       case 'confirmado': 
-      case 'valorado': colorClass = "bg-green-100 text-green-800 border-green-200"; label = "Completado"; break;
+      case 'valorado': colorClass = "bg-green-900/30 text-green-300 border-green-800"; label = "Completado"; break;
     }
-    return <span className={`px-2 py-1 rounded-full text-xs font-bold border ${colorClass}`}>{label}</span>;
+    return <span className={`px-2 py-1 rounded-full text-[10px] font-bold border ${colorClass} uppercase tracking-wider`}>{label}</span>;
   }
 
-  let colorClass = "bg-gray-100 text-gray-800 border-gray-200";
+  let colorClass = "bg-slate-800 text-slate-400 border-slate-700";
   switch (cita.estado.toLowerCase()) {
-    case 'pendiente': colorClass = "bg-amber-100 text-amber-800 border-amber-200"; break;
-    case 'aceptada': colorClass = "bg-emerald-100 text-emerald-800 border-emerald-200"; break;
-    case 'rechazada': colorClass = "bg-red-100 text-red-800 border-red-200"; break;
+    case 'pendiente': colorClass = "bg-amber-900/30 text-amber-300 border-amber-800"; break;
+    case 'aceptada': colorClass = "bg-emerald-900/30 text-emerald-300 border-emerald-800"; break;
+    case 'rechazada': colorClass = "bg-red-900/30 text-red-300 border-red-800"; break;
   }
   
-  return <span className={`px-2 py-1 rounded-full text-xs font-bold border ${colorClass} capitalize`}>{cita.estado}</span>;
+  return <span className={`px-2 py-1 rounded-full text-[10px] font-bold border ${colorClass} uppercase tracking-wider`}>{cita.estado}</span>;
 }
 
-// Modal Crear Propuesta
-function CreateTrabajoModal({ cita, isOpen, onClose, onSuccess }: CreateTrabajoProps) { // 👈 Tipado Correcto
+function CreateTrabajoModal({ cita, isOpen, onClose, onSuccess }: CreateTrabajoProps) {
   const { token } = useAuthStore();
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<TrabajoFormInputs>({ resolver: zodResolver(trabajoSchema) });
 
@@ -120,20 +121,19 @@ function CreateTrabajoModal({ cita, isOpen, onClose, onSuccess }: CreateTrabajoP
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="bg-slate-900 border-slate-700 text-white">
-        <DialogHeader><DialogTitle>Crear Propuesta</DialogTitle><DialogDescription>Envía el presupuesto al cliente.</DialogDescription></DialogHeader>
-        <form onSubmit={handleSubmit((data) => mutation.mutate(data))} className="space-y-4">
-          <div><Label>Descripción</Label><Textarea {...register("descripcion")} className="bg-slate-800 border-slate-700" />{errors.descripcion && <p className="text-red-400 text-xs">{errors.descripcion.message}</p>}</div>
-          <div><Label>Precio (CLP)</Label><Input type="number" {...register("precio_acordado", { valueAsNumber: true })} className="bg-slate-800 border-slate-700" /></div>
-          <DialogFooter><Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button><Button type="submit" disabled={isSubmitting}>Enviar</Button></DialogFooter>
+      <DialogContent className="bg-slate-900 border-slate-700 text-white sm:max-w-md">
+        <DialogHeader><DialogTitle>Crear Propuesta</DialogTitle><DialogDescription className="text-slate-400">Envía el presupuesto al cliente.</DialogDescription></DialogHeader>
+        <form onSubmit={handleSubmit((data) => mutation.mutate(data))} className="space-y-4 pt-2">
+          <div><Label>Descripción</Label><Textarea {...register("descripcion")} className="bg-slate-800 border-slate-700 mt-1" />{errors.descripcion && <p className="text-red-400 text-xs mt-1">{errors.descripcion.message}</p>}</div>
+          <div><Label>Precio (CLP)</Label><Input type="number" {...register("precio_acordado", { valueAsNumber: true })} className="bg-slate-800 border-slate-700 mt-1" /></div>
+          <DialogFooter><Button type="button" variant="ghost" onClick={onClose} className="text-slate-400 hover:text-white">Cancelar</Button><Button type="submit" disabled={isSubmitting} className="bg-cyan-600 hover:bg-cyan-500 text-white">Enviar</Button></DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
   );
 }
 
-// Modal Valorar
-function RateTrabajoModal({ trabajoId, isOpen, onClose, onSuccess }: RateTrabajoProps) { // 👈 Tipado Correcto
+function RateTrabajoModal({ trabajoId, isOpen, onClose, onSuccess }: RateTrabajoProps) {
   const { token } = useAuthStore();
   const [rating, setRating] = useState(0);
   const { register, handleSubmit, setValue } = useForm<RatingFormInputs>({ resolver: zodResolver(ratingSchema) });
@@ -148,12 +148,12 @@ function RateTrabajoModal({ trabajoId, isOpen, onClose, onSuccess }: RateTrabajo
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="bg-slate-900 border-slate-700 text-white">
+      <DialogContent className="bg-slate-900 border-slate-700 text-white sm:max-w-md">
         <DialogHeader><DialogTitle>Valorar Servicio</DialogTitle></DialogHeader>
-        <form onSubmit={handleSubmit((data) => mutation.mutate(data))} className="space-y-4">
-          <div className="flex gap-2 justify-center">{[1,2,3,4,5].map(star => (<FaStar key={star} className={`cursor-pointer text-2xl ${star <= rating ? 'text-yellow-400' : 'text-slate-600'}`} onClick={() => handleRate(star)} />))}</div>
+        <form onSubmit={handleSubmit((data) => mutation.mutate(data))} className="space-y-4 pt-2">
+          <div className="flex gap-2 justify-center pb-2">{[1,2,3,4,5].map(star => (<FaStar key={star} className={`cursor-pointer text-3xl transition-colors ${star <= rating ? 'text-yellow-400' : 'text-slate-700 hover:text-yellow-200'}`} onClick={() => handleRate(star)} />))}</div>
           <Textarea {...register("comentario")} placeholder="Escribe un comentario..." className="bg-slate-800 border-slate-700" />
-          <DialogFooter><Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button><Button type="submit" disabled={rating === 0}>Enviar</Button></DialogFooter>
+          <DialogFooter><Button type="button" variant="ghost" onClick={onClose} className="text-slate-400 hover:text-white">Cancelar</Button><Button type="submit" disabled={rating === 0} className="bg-yellow-500 hover:bg-yellow-600 text-slate-900 font-bold">Enviar Valoración</Button></DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
@@ -176,7 +176,6 @@ export function MyCitasList() {
     queryFn: () => fetchMyCitas(token),
   });
 
-  // Tipamos explícitamente los argumentos de la mutación
   const actionMutation = useMutation({
     mutationFn: async ({ url, service }: { url: string, service: 'calendario' | 'proveedores' }) => {
       const api = service === 'calendario' ? apiCalendario : apiProveedores;
@@ -194,8 +193,8 @@ export function MyCitasList() {
   };
 
   if (isLoading) return <div className="flex justify-center p-10"><FaSpinner className="animate-spin text-3xl text-cyan-400" /></div>;
-  if (error) return <div className="text-center text-red-400 p-4 bg-slate-800 rounded">Error al cargar citas.</div>;
-  if (!citas || citas.length === 0) return <div className="text-center text-slate-400 p-10 bg-slate-800/50 rounded-xl">No tienes citas agendadas.</div>;
+  if (error) return <div className="text-center text-red-400 p-4 bg-slate-800 rounded-lg border border-red-900/50">Error al cargar citas.</div>;
+  if (!citas || citas.length === 0) return <div className="text-center text-slate-400 p-10 bg-slate-800/50 rounded-xl border border-slate-700">No tienes citas agendadas.</div>;
 
   return (
     <div className="space-y-4">
@@ -210,43 +209,59 @@ export function MyCitasList() {
         const idOtro = soyElPrestador ? cita.id_cliente : cita.id_prestador;
 
         return (
-          <div key={cita.id_cita} className="bg-slate-800 border border-slate-700 rounded-xl p-5 shadow-md hover:border-slate-600 transition-colors">
+          <div key={cita.id_cita} className="bg-slate-800 border border-slate-700 rounded-xl p-5 shadow-lg hover:border-slate-600 transition-all">
             
-            <div className="flex justify-between items-start mb-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-4">
               <div>
                 <div className="flex items-center gap-2 text-white font-bold text-lg">
                   <FaClock className="text-cyan-400" />
                   {new Date(cita.fecha_hora_cita).toLocaleString('es-CL', { dateStyle: 'full', timeStyle: 'short' })}
                 </div>
-                <div className="flex items-center gap-2 text-slate-400 text-sm mt-1">
-                  <FaUser className="text-slate-500" />
-                  <span>{rolOtro}: <strong className="text-slate-200">{nombreOtro || `Usuario #${idOtro}`}</strong></span>
+                
+                <div className="flex items-center gap-3 text-slate-400 text-sm mt-1">
+                  <div className="flex items-center gap-1">
+                    <FaUser className="text-slate-500" />
+                    <span>{rolOtro}: <strong className="text-slate-200">{nombreOtro || `Usuario #${idOtro}`}</strong></span>
+                  </div>
+                  
+                  {/* 👇 NUEVO BOTÓN CHAT */}
+                  <Link 
+                    to={`/mensajes/${idOtro}`} 
+                    className="flex items-center gap-1 text-cyan-400 hover:text-cyan-300 transition-colors font-medium bg-cyan-950/30 px-2 py-0.5 rounded border border-cyan-900/50"
+                    title="Enviar mensaje"
+                  >
+                    <FaCommentDots size={12} />
+                    <span className="text-xs">Chat</span>
+                  </Link>
                 </div>
               </div>
               <CitaStatusBadge cita={cita} />
             </div>
 
+            {/* 👇 CORRECCIÓN: break-words para que no se salga */}
             {cita.detalles && (
-              <div className="bg-slate-900/50 p-3 rounded-lg mb-4 border border-slate-800">
-                <p className="text-slate-300 text-sm italic">"{cita.detalles}"</p>
+              <div className="bg-slate-900/50 p-3 rounded-lg mb-4 border border-slate-800/50">
+                <p className="text-slate-300 text-sm italic break-words whitespace-pre-wrap leading-relaxed">
+                  "{cita.detalles}"
+                </p>
               </div>
             )}
 
-            <div className="flex flex-wrap gap-3 pt-3 border-t border-slate-700">
+            <div className="flex flex-wrap gap-2 pt-3 border-t border-slate-700">
               
               {soyElPrestador && (
                 <>
                   {cita.estado === 'pendiente' && (
                     <>
-                      <Button variant="destructive" size="sm" onClick={() => handleAction(`/citas/${cita.id_cita}/rechazar`, 'calendario')}><FaBan className="mr-2"/> Rechazar</Button>
-                      <Button className="bg-green-600 hover:bg-green-700 text-white" size="sm" onClick={() => handleAction(`/citas/${cita.id_cita}/aceptar`, 'calendario')}><FaCheckCircle className="mr-2"/> Aceptar Solicitud</Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleAction(`/citas/${cita.id_cita}/rechazar`, 'calendario')} className="text-red-400 hover:text-red-300 hover:bg-red-900/20"><FaBan className="mr-2"/> Rechazar</Button>
+                      <Button className="bg-emerald-600 hover:bg-emerald-500 text-white border-none" size="sm" onClick={() => handleAction(`/citas/${cita.id_cita}/aceptar`, 'calendario')}><FaCheckCircle className="mr-2"/> Aceptar</Button>
                     </>
                   )}
                   {cita.estado === 'aceptada' && !cita.id_trabajo && (
-                    <Button className="bg-cyan-600 hover:bg-cyan-700 text-white" size="sm" onClick={() => setModalProposal(cita)}>Crear Propuesta ($)</Button>
+                    <Button className="bg-cyan-600 hover:bg-cyan-500 text-white border-none" size="sm" onClick={() => setModalProposal(cita)}>Crear Propuesta ($)</Button>
                   )}
                   {cita.estado_trabajo === 'aceptado' && (
-                    <Button className="bg-indigo-600 hover:bg-indigo-700 text-white" size="sm" onClick={() => handleAction(`/trabajos/${cita.id_trabajo}/finalizar`, 'proveedores')}>Finalizar Trabajo</Button>
+                    <Button className="bg-indigo-600 hover:bg-indigo-500 text-white border-none" size="sm" onClick={() => handleAction(`/trabajos/${cita.id_trabajo}/finalizar`, 'proveedores')}>Finalizar Trabajo</Button>
                   )}
                 </>
               )}
@@ -254,16 +269,16 @@ export function MyCitasList() {
               {soyElCliente && (
                 <>
                   {cita.estado === 'pendiente' && (
-                    <span className="text-slate-500 text-sm italic flex items-center"><FaClock className="mr-1"/> Esperando confirmación del prestador...</span>
+                    <span className="text-slate-500 text-xs italic flex items-center bg-slate-900/50 px-3 py-1.5 rounded-full"><FaClock className="mr-1.5"/> Esperando confirmación...</span>
                   )}
                   {cita.estado_trabajo === 'propuesto' && (
-                    <Button className="bg-green-600 hover:bg-green-700 text-white" size="sm" onClick={() => handleAction(`/trabajos/${cita.id_trabajo}/aceptar`, 'proveedores')}>Aceptar Propuesta</Button>
+                    <Button className="bg-emerald-600 hover:bg-emerald-500 text-white border-none" size="sm" onClick={() => handleAction(`/trabajos/${cita.id_trabajo}/aceptar`, 'proveedores')}>Aceptar Propuesta</Button>
                   )}
                   {cita.estado_trabajo === 'finalizado' && (
-                    <Button className="bg-purple-600 hover:bg-purple-700 text-white" size="sm" onClick={() => handleAction(`/trabajos/${cita.id_trabajo}/confirmar`, 'proveedores')}>Confirmar y Pagar</Button>
+                    <Button className="bg-purple-600 hover:bg-purple-500 text-white border-none" size="sm" onClick={() => handleAction(`/trabajos/${cita.id_trabajo}/confirmar`, 'proveedores')}>Confirmar y Pagar</Button>
                   )}
                   {cita.estado_trabajo === 'confirmado' && !cita.id_valoracion && (
-                    <Button className="bg-yellow-500 hover:bg-yellow-600 text-slate-900" size="sm" onClick={() => setModalRating(cita.id_trabajo!)}><FaStar className="mr-1"/> Valorar Servicio</Button>
+                    <Button className="bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-bold border-none" size="sm" onClick={() => setModalRating(cita.id_trabajo!)}><FaStar className="mr-1"/> Valorar</Button>
                   )}
                 </>
               )}
