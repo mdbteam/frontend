@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+     "source": "/api/chatbot/:path*",
+     "destination": "https://ai-search-service-3a39.onrender.com/chatbot/:path*"
+     },
+    {
       "source": "/api/auth/:path*",
       "destination": "https://auth-service-1-8301.onrender.com/auth/:path*"
     },
@@ -9,8 +13,8 @@
       "destination": "https://calendario-service-u5f6.onrender.com/:path*"
     },
     {
-      "source": "/api/chat/:path*",
-      "destination": "https://communication-service-akj6.onrender.com/chat/:path*"
+      "source": "/api/:path*",
+      "destination": "https://communication-service-akj6.onrender.com/:path*"
     },
     {
       "source": "/api/:path*",

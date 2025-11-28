@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { FaSpinner } from 'react-icons/fa';
+import { FaSpinner, FaCloudUploadAlt, FaFileAlt } from 'react-icons/fa';
 
 import { InfoDialog } from '../components/ui/InfoDialog';
 import { Button } from '../components/ui/button';
@@ -28,6 +28,9 @@ const OFICIOS_LISTA = [
   "Servicios de Limpieza", "Techado", "Otro"
 ];
 
+// --- 1. SCHEMAS ACTUALIZADOS PARA ACEPTAR CUALQUIER ARCHIVO ---
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
 const applicationSchema = z.object({
   nombres: z.string().min(1, "El nombre es requerido"),
   primer_apellido: z.string().min(1, "El apellido es requerido"),
@@ -37,13 +40,14 @@ const applicationSchema = z.object({
   oficio: z.string().min(1, "Debes seleccionar un oficio"),
   bio: z.string().min(50, "Tu biografía debe tener al menos 50 caracteres"),
   
+  // Aceptamos cualquier archivo, solo validamos que exista y el peso
   archivos_portafolio: z.instanceof(FileList)
-    .refine((files) => files.length > 0, "Debes subir al menos una imagen para tu portafolio.")
-    .refine((files) => Array.from(files).every(file => file.size <= 5 * 1024 * 1024), "Cada archivo no debe superar los 5MB."),
+    .refine((files) => files.length > 0, "Debes subir al menos un archivo para tu portafolio.")
+    .refine((files) => Array.from(files).every(file => file.size <= MAX_FILE_SIZE), "Cada archivo no debe superar los 10MB."),
     
   archivos_certificados: z.instanceof(FileList)
     .refine((files) => files.length > 0, "Debes subir al menos un certificado.")
-    .refine((files) => Array.from(files).every(file => file.size <= 5 * 1024 * 1024), "Cada archivo no debe superar los 5MB."),
+    .refine((files) => Array.from(files).every(file => file.size <= MAX_FILE_SIZE), "Cada archivo no debe superar los 10MB."),
 });
 
 type ApplicationFormInputs = z.infer<typeof applicationSchema>;
@@ -75,7 +79,6 @@ const sendPostulacion = async ({ formData, token }: { formData: FormData, token:
   return data;
 };
 
-// --- CORRECCIÓN: Componente movido fuera del render principal ---
 const InputError = ({ message }: { message?: string }) => 
   message ? <p className="mt-1 text-sm text-red-400">{message}</p> : null;
 
@@ -84,22 +87,12 @@ export default function ProviderApplicationPage() {
   const navigate = useNavigate();
   
   const [modalInfo, setModalInfo] = useState<{ isOpen: boolean; title: string; description: string; type: 'success' | 'error' }>({
-    isOpen: false,
-    title: '',
-    description: '',
-    type: 'success',
+    isOpen: false, title: '', description: '', type: 'success',
   });
 
   const { register, handleSubmit, control, watch, reset, formState: { errors } } = useForm<ApplicationFormInputs>({
     resolver: zodResolver(applicationSchema),
-    defaultValues: {
-      nombres: "",
-      primer_apellido: "",
-      segundo_apellido: "",
-      direccion: "",
-      telefono: "",
-      bio: "",
-    }
+    defaultValues: { nombres: "", primer_apellido: "", direccion: "", bio: "" }
   });
   
   const { data: profile, isLoading: isLoadingProfile } = useQuery({
@@ -129,7 +122,7 @@ export default function ProviderApplicationPage() {
       setModalInfo({
         isOpen: true,
         title: '¡Postulación Enviada!',
-        description: `Tu postulación ha sido enviada con éxito. Estado actual: ${data.statusPostulacion}. Serás notificado cuando sea revisada.`,
+        description: `Tu postulación ha sido enviada con éxito. Estado: ${data.statusPostulacion}.`,
         type: 'success',
       });
     },
@@ -138,7 +131,7 @@ export default function ProviderApplicationPage() {
       setModalInfo({
         isOpen: true,
         title: 'Error al Enviar',
-        description: 'No se pudo enviar tu postulación. Por favor, revisa los campos e intenta de nuevo.',
+        description: 'No se pudo enviar tu postulación. Revisa los datos.',
         type: 'error',
       });
     }
@@ -146,179 +139,172 @@ export default function ProviderApplicationPage() {
   
   const handleCloseModal = () => {
     setModalInfo({ ...modalInfo, isOpen: false });
-    if (modalInfo.type === 'success') {
-      navigate('/perfil');
-    }
+    if (modalInfo.type === 'success') navigate('/perfil');
   };
 
   const onSubmit: SubmitHandler<ApplicationFormInputs> = (data) => {
     const formData = new FormData();
-    formData.append('nombres', data.nombres);
-    formData.append('primer_apellido', data.primer_apellido);
-    if (data.segundo_apellido) formData.append('segundo_apellido', data.segundo_apellido);
-    formData.append('direccion', data.direccion);
-    if (data.telefono) formData.append('telefono', data.telefono);
-    formData.append('oficio', data.oficio);
-    formData.append('bio', data.bio);
+    // Append datos básicos...
+    Object.entries(data).forEach(([key, value]) => {
+        if (key !== 'archivos_portafolio' && key !== 'archivos_certificados' && value) {
+            formData.append(key, value as string);
+        }
+    });
 
-    // --- CORRECCIÓN: Bucle for...of en lugar de forEach ---
-    for (const file of Array.from(data.archivos_portafolio)) {
-      formData.append('archivos_portafolio', file);
-    }
-    for (const file of Array.from(data.archivos_certificados)) {
-      formData.append('archivos_certificados', file);
-    }
+    // Append archivos
+    for (const file of Array.from(data.archivos_portafolio)) formData.append('archivos_portafolio', file);
+    for (const file of Array.from(data.archivos_certificados)) formData.append('archivos_certificados', file);
 
     mutation.mutate({ formData, token });
   };
     
-  const getFileLabel = (files: FileList | undefined) => {
-    if (!files || files.length === 0) {
-      return "Ningún archivo seleccionado";
-    }
-    if (files.length === 1) {
-      return files[0].name;
-    }
+  // Helper visual para mostrar qué se seleccionó
+  const getFileLabel = (files: FileList | undefined, placeholder: string) => {
+    if (!files || files.length === 0) return placeholder;
+    if (files.length === 1) return files[0].name;
     return `${files.length} archivos seleccionados`;
   };
 
-  if (isLoadingProfile) {
-    return (
-      <div className="flex justify-center items-center min-h-[50vh]">
-        <FaSpinner className="animate-spin text-amber-400 text-4xl" />
-      </div>
-    );
-  }
+  if (isLoadingProfile) return <div className="flex justify-center items-center min-h-[50vh]"><FaSpinner className="animate-spin text-amber-400 text-4xl" /></div>;
 
   return (
     <>
-      <InfoDialog
-        isOpen={modalInfo.isOpen}
-        onClose={handleCloseModal}
-        title={modalInfo.title}
-        description={modalInfo.description}
-        type={modalInfo.type}
-      />
+      <InfoDialog isOpen={modalInfo.isOpen} onClose={handleCloseModal} title={modalInfo.title} description={modalInfo.description} type={modalInfo.type} />
 
-      <div className="p-4 sm:p-8">
-        <div className="mx-auto max-w-2xl">
-          <h1 className="text-4xl font-bold text-white font-poppins mb-8 text-center [text-shadow:0_0_15px_rgba(234,179,8,0.4)]">
-            Postula para ser Prestador
-          </h1>
+      <div className="p-4 sm:p-8 bg-slate-950 min-h-screen">
+        <div className="mx-auto max-w-2xl bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl">
+          <h1 className="text-3xl font-bold text-white mb-2 text-center">Postulación a Prestador</h1>
+          <p className="text-slate-400 text-center mb-8 text-sm">Únete a nuestra red de expertos y haz crecer tu negocio.</p>
+          
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Datos Personales */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
                 <Label htmlFor="nombres">Nombres</Label>
-                <Input type="text" id="nombres" {...register("nombres")} className={errors.nombres ? 'border-red-500' : ''} />
+                <Input id="nombres" {...register("nombres")} className="bg-slate-800 border-slate-700" />
                 <InputError message={errors.nombres?.message} />
               </div>
               <div>
                 <Label htmlFor="primer_apellido">Primer Apellido</Label>
-                <Input type="text" id="primer_apellido" {...register("primer_apellido")} className={errors.primer_apellido ? 'border-red-500' : ''} />
+                <Input id="primer_apellido" {...register("primer_apellido")} className="bg-slate-800 border-slate-700" />
                 <InputError message={errors.primer_apellido?.message} />
               </div>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
                 <Label htmlFor="segundo_apellido">Segundo Apellido (Opcional)</Label>
-                <Input type="text" id="segundo_apellido" {...register("segundo_apellido")} />
+                <Input id="segundo_apellido" {...register("segundo_apellido")} className="bg-slate-800 border-slate-700" />
               </div>
               <div>
-                <Label htmlFor="telefono">Teléfono (Opcional)</Label>
-                <Input type="tel" id="telefono" {...register("telefono")} />
+                <Label htmlFor="telefono">Teléfono</Label>
+                <Input type="tel" id="telefono" {...register("telefono")} className="bg-slate-800 border-slate-700" />
               </div>
             </div>
 
             <div>
               <Label htmlFor="direccion">Dirección</Label>
-              <Input type="text" id="direccion" {...register("direccion")} className={errors.direccion ? 'border-red-500' : ''} />
+              <Input id="direccion" {...register("direccion")} className="bg-slate-800 border-slate-700" />
               <InputError message={errors.direccion?.message} />
             </div>
 
-            <div>
-              <Label htmlFor="oficio">Oficio Principal</Label>
-              <Controller
-                name="oficio"
-                control={control}
-                render={({ field }) => (
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <SelectTrigger className={errors.oficio ? 'border-red-500' : ''}>
-                      <SelectValue placeholder="Selecciona tu especialidad principal..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {OFICIOS_LISTA.map((oficio) => (
-                        <SelectItem key={oficio} value={oficio}>{oficio}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-              <InputError message={errors.oficio?.message} />
+            {/* Datos Profesionales */}
+            <div className="pt-4 border-t border-slate-800">
+                <h3 className="text-lg font-semibold text-white mb-4">Perfil Profesional</h3>
+                
+                <div className="mb-4">
+                    <Label htmlFor="oficio">Oficio Principal</Label>
+                    <Controller
+                        name="oficio"
+                        control={control}
+                        render={({ field }) => (
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
+                            <SelectValue placeholder="Selecciona tu especialidad..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                            {OFICIOS_LISTA.map((oficio) => (
+                                <SelectItem key={oficio} value={oficio}>{oficio}</SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        )}
+                    />
+                    <InputError message={errors.oficio?.message} />
+                </div>
+
+                <div>
+                    <Label htmlFor="bio">Biografía Profesional</Label>
+                    <Textarea id="bio" rows={4} {...register("bio")} className="bg-slate-800 border-slate-700" placeholder="Describe tu experiencia, herramientas que manejas, etc..." />
+                    <InputError message={errors.bio?.message} />
+                </div>
             </div>
 
-            <div>
-              <Label htmlFor="bio">Biografía (mín. 50 caracteres)</Label>
-              <Textarea id="bio" rows={4} {...register("bio")} className={errors.bio ? 'border-red-500' : ''} placeholder="Habla sobre ti, tu experiencia..." />
-              <InputError message={errors.bio?.message} />
+            {/* Carga de Archivos */}
+            <div className="pt-4 border-t border-slate-800 space-y-5">
+                <h3 className="text-lg font-semibold text-white">Documentación</h3>
+
+                {/* Portafolio */}
+                <div>
+                    <Label className="flex items-center gap-2 mb-2">
+                        <FaCloudUploadAlt className="text-cyan-400" /> Portafolio (Fotos, PDF, etc.)
+                    </Label>
+                    <label 
+                        htmlFor="archivos_portafolio" 
+                        className={`flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-lg cursor-pointer hover:bg-slate-800/50 transition-colors ${errors.archivos_portafolio ? 'border-red-500 bg-red-900/10' : 'border-slate-700 bg-slate-800/30'}`}
+                    >
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                            <p className="text-sm text-slate-400 font-medium truncate max-w-xs">
+                                {getFileLabel(portfolioFiles, "Haz clic para subir archivos")}
+                            </p>
+                        </div>
+                        <Input 
+                            type="file" 
+                            id="archivos_portafolio" 
+                            {...register("archivos_portafolio")} 
+                            multiple 
+                            // 2. CORRECCIÓN: Quitamos accept para permitir todo
+                            className="hidden"
+                        />
+                    </label>
+                    <InputError message={errors.archivos_portafolio?.message} />
+                </div>
+                
+                {/* Certificados */}
+                <div>
+                    <Label className="flex items-center gap-2 mb-2">
+                        <FaFileAlt className="text-amber-400" /> Certificados y Antecedentes
+                    </Label>
+                    <label 
+                        htmlFor="archivos_certificados" 
+                        className={`flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-lg cursor-pointer hover:bg-slate-800/50 transition-colors ${errors.archivos_certificados ? 'border-red-500 bg-red-900/10' : 'border-slate-700 bg-slate-800/30'}`}
+                    >
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                            <p className="text-sm text-slate-400 font-medium truncate max-w-xs">
+                                {getFileLabel(certificateFiles, "Sube tus certificados aquí")}
+                            </p>
+                        </div>
+                        <Input 
+                            type="file" 
+                            id="archivos_certificados" 
+                            {...register("archivos_certificados")} 
+                            multiple 
+                            // 2. CORRECCIÓN: Sin restricciones de tipo
+                            className="hidden"
+                        />
+                    </label>
+                    <InputError message={errors.archivos_certificados?.message} />
+                </div>
             </div>
 
-            <div>
-              <Label>Portafolio (Imágenes de trabajos)</Label>
-              <label 
-                htmlFor="archivos_portafolio" 
-                className={`flex h-10 w-full items-center rounded-md border border-slate-700 bg-slate-900/50 px-3 text-sm text-slate-100 ${errors.archivos_portafolio ? 'border-red-500' : ''} cursor-pointer`}
-              >
-                <span className="rounded-md bg-amber-400 text-slate-900 hover:bg-amber-400/90 px-4 py-1.5 text-sm font-semibold cursor-pointer">
-                  Elegir archivos
-                </span>
-                <span className="ml-3 text-sm text-slate-400 truncate">
-                  {getFileLabel(portfolioFiles)}
-                </span>
-              </label>
-              <Input 
-                type="file" 
-                id="archivos_portafolio" 
-                {...register("archivos_portafolio")} 
-                multiple 
-                accept="image/*" 
-                className="hidden"
-              />
-              <InputError message={errors.archivos_portafolio?.message} />
-            </div>
-            
-            <div>
-              <Label>Certificados (PDF o Imágenes)</Label>
-              <label 
-                htmlFor="archivos_certificados" 
-                className={`flex h-10 w-full items-center rounded-md border border-slate-700 bg-slate-900/50 px-3 text-sm text-slate-100 ${errors.archivos_certificados ? 'border-red-500' : ''} cursor-pointer`}
-              >
-                <span className="rounded-md bg-amber-400 text-slate-900 hover:bg-amber-400/90 px-4 py-1.5 text-sm font-semibold cursor-pointer">
-                  Elegir archivos
-                </span>
-                <span className="ml-3 text-sm text-slate-400 truncate">
-                  {getFileLabel(certificateFiles)}
-                </span>
-              </label>
-              <Input 
-                type="file" 
-                id="archivos_certificados" 
-                {...register("archivos_certificados")} 
-                multiple 
-                accept="image/*,application/pdf" 
-                className="hidden"
-              />
-              <InputError message={errors.archivos_certificados?.message} />
-            </div>
-
-            <div>
+            <div className="pt-4">
               <Button 
                 type="submit" 
                 disabled={mutation.isPending} 
-                className="w-full bg-amber-400 text-slate-900 hover:bg-amber-400/90"
+                className="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 font-bold py-6 text-lg hover:from-amber-500 hover:to-orange-600 shadow-lg"
               >
-                {mutation.isPending ? "Enviando Postulación..." : "Enviar Postulación"}
+                {mutation.isPending ? "Enviando..." : "Enviar Postulación"}
               </Button>
             </div>
           </form>
