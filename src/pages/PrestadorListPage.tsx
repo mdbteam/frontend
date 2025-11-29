@@ -1,149 +1,162 @@
 import { useState, useEffect } from 'react';
-// 1. Importamos Link y useSearchParams
-import { Link, useSearchParams } from 'react-router-dom';
-import axios from 'axios';
 import { useQuery } from '@tanstack/react-query';
-import { FaSpinner, FaSearch, FaStar } from 'react-icons/fa';
+import { useSearchParams } from 'react-router-dom';
+import axios from 'axios';
+import { Search, Briefcase, User } from 'lucide-react';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { PrestadorCard } from '../components/prestadores/PrestadorCard';
 
-interface Prestador {
-  id: string;
+const CATEGORIAS_POPULARES = [
+  'Gasfiteria', 'Electricidad', 'Carpinteria', 'Pintura', 'Muebleria',
+  'Albanileria', 'Jardineria', 'Mecanica', 'Plomeria', 'Cerrajeria',
+  'Servicios de Limpieza', 'Techado', 'Reparacion de Electrodomesticos',
+  'Instalacion de Aire Acondicionado',
+];
+
+interface PrestadorResumen {
+  id?: number;
+  id_usuario?: number;
   nombres: string;
   primer_apellido: string;
   foto_url: string | null;
-  oficios: string[]; // <-- Corregido de 'categorias' a 'oficios'
-  resumen: string | null; // <-- Corregido de 'resumen_profesional' a 'resumen'
-  puntuacion: number | null; // <-- Corregido de 'anos_experiencia' a 'puntuacion'
+  oficios: string[];
+  puntuacion_promedio: number;
+  resumen?: string;
 }
 
-function PrestadorCard({ prestador }: { prestador: Prestador }) {
-  return (
-    <div className="bg-slate-800/50 border border-slate-700 rounded-lg shadow-lg overflow-hidden transition-all duration-300 h-full">
-      <div className="p-6">
-        <div className="flex items-center space-x-4">
-          <img
-            className="h-20 w-20 rounded-full object-cover border-2 border-slate-600"
-            src={prestador.foto_url || `https://ui-avatars.com/api/?name=${prestador.nombres}+${prestador.primer_apellido}&background=0d6efd&color=fff`}
-            alt={`${prestador.nombres} ${prestador.primer_apellido}`}
-          />
-          <div>
-            <h3 className="text-xl font-bold text-white">
-              {prestador.nombres} {prestador.primer_apellido}
-            </h3>
-            <span className="text-sm font-medium text-cyan-400">
-              {prestador.oficios?.[0] || 'Profesional'}
-            </span>
-          </div>
-        </div>
-        <p className="text-slate-300 mt-4 text-sm leading-relaxed h-20 overflow-hidden text-ellipsis">
-          {prestador.resumen || 'Sin resumen disponible.'}
-        </p>
-        <div className="mt-4 pt-4 border-t border-slate-700 flex justify-between items-center">
-          <span className="flex items-center text-sm text-yellow-400">
-            <FaStar className="mr-1" />
-            {prestador.puntuacion?.toFixed(1) || 'N/A'}
-          </span>
-          <span className="text-sm font-medium text-cyan-400 hover:text-cyan-300">
-            Ver Perfil →
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
+const apiProveedores = axios.create({
+  baseURL: 'https://provider-service-mjuj.onrender.com',
+});
 
-// 2. Actualizamos la función de fetching
-const fetchPrestadores = async (searchTerm: string, categoria: string | null) => {
-  const { data } = await axios.get<Prestador[]>('/api/prestadores', {
+// 2. ACTUALIZAMOS LA FUNCIÓN DE FETCH
+const fetchPrestadores = async (categoria: string | null, searchTerm: string, genero: string | null) => {
+  const { data } = await apiProveedores.get<PrestadorResumen[]>('/prestadores', {
     params: {
       q: searchTerm || undefined,
-      categoria: categoria || undefined, // <-- Añadimos el nuevo parámetro
-    }
+      categoria: categoria || undefined,
+      genero: genero || undefined, // <--- ¡AQUÍ ESTÁ LA MAGIA!
+    },
   });
   return data;
 };
 
 export default function PrestadorListPage() {
-  // 3. Leemos los parámetros de la URL
-  const [searchParams] = useSearchParams();
-  const categoriaFromUrl = searchParams.get('categoria');
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || '');
+  const [categoriaFilter, setCategoriaFilter] = useState<string | null>(searchParams.get('categoria') || null);
+  // 3. LEEMOS EL GÉNERO DE LA URL
+  const [generoFilter, setGeneroFilter] = useState<string | null>(searchParams.get('genero') || null);
 
-  // 4. El estado de la barra de búsqueda ahora se sincroniza con la URL
-  const [searchTerm, setSearchTerm] = useState(categoriaFromUrl || '');
-
-  // 5. Sincronizamos el estado si la URL cambia
   useEffect(() => {
-    setSearchTerm(categoriaFromUrl || '');
-  }, [categoriaFromUrl]);
+    const cat = searchParams.get('categoria');
+    const q = searchParams.get('q');
+    const gen = searchParams.get('genero');
+    
+    if (cat !== categoriaFilter) setCategoriaFilter(cat || null);
+    if (q !== searchTerm && q !== null) setSearchTerm(q);
+    if (gen !== generoFilter) setGeneroFilter(gen || null);
+  }, [searchParams, categoriaFilter, searchTerm, generoFilter]);
 
-  // 6. Pasamos ambos términos de búsqueda a useQuery
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['prestadores', searchTerm, categoriaFromUrl],
-    queryFn: () => fetchPrestadores(searchTerm, categoriaFromUrl),
+  const updateFilters = (newCategory: string | null, newSearch: string) => {
+    setCategoriaFilter(newCategory);
+    setSearchTerm(newSearch);
+    
+    const params: Record<string, string> = {};
+    if (newCategory) params.categoria = newCategory;
+    if (newSearch) params.q = newSearch;
+    // Si ya había género en la URL, lo mantenemos (o lo limpias si prefieres)
+    if (generoFilter) params.genero = generoFilter; 
+    
+    setSearchParams(params);
+  };
+
+  // 4. PASAMOS EL GÉNERO A LA QUERY
+  const { data: prestadores, isLoading, error } = useQuery({
+    queryKey: ['prestadoresPublicos', categoriaFilter, searchTerm, generoFilter],
+    queryFn: () => fetchPrestadores(categoriaFilter, searchTerm, generoFilter),
   });
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
-    // Nota: Esto no actualiza la URL, solo el estado de búsqueda local.
-    // Podríamos añadir 'setSearchParams' aquí si quisiéramos que la URL cambie al teclear.
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateFilters(categoriaFilter, searchTerm);
   };
 
   return (
-    <div className="p-4 sm:p-8">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold text-white font-poppins [text-shadow:0_0_15px_rgba(34,211,238,0.4)]">
-            Encuentra tu Agente
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans">
+      <section className="relative py-20 px-4 overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-cyan-900/30 via-slate-950 to-slate-950 z-0" />
+        <div className="max-w-5xl mx-auto relative z-10 text-center">
+          <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500">
+            Encuentra Expertos
           </h1>
-          <p className="mt-2 text-lg text-slate-300">
-            Busca profesionales calificados para el trabajo que necesitas.
+          <p className="text-xl text-slate-400 mb-10 max-w-2xl mx-auto">
+            Conectamos tus necesidades con profesionales calificados.
           </p>
-          <div className="mt-6 max-w-lg mx-auto">
-            <div className="relative">
-              <input
-                type="text"
-                value={searchTerm} // <-- El valor está controlado por el estado
-                onChange={handleSearchChange}
-                placeholder="Buscar por oficio o nombre (Ej: Plomero)"
-                className="w-full px-5 py-3 pr-12 rounded-full bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
-              />
-              <div className="absolute inset-y-0 right-0 pr-5 flex items-center pointer-events-none">
-                <FaSearch className="text-slate-400" />
-              </div>
+          <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-4 max-w-2xl mx-auto">
+            <div className="relative flex-grow">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500" />
+              <Input type="text" placeholder="¿Qué buscas?" className="pl-10 bg-slate-900/80 border-slate-700 h-12 text-lg text-white" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
+            <Button type="submit" className="h-12 px-8 bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-lg">Buscar</Button>
+          </form>
+        </div>
+      </section>
+
+      <main className="max-w-7xl mx-auto px-4 pb-20">
+        <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+              <Briefcase className="text-cyan-400" size={24} />
+              {categoriaFilter ? `Expertos en ${categoriaFilter}` : 'Todos los Profesionales'}
+            </h2>
+            {/* Aviso visual de filtro activo */}
+            {generoFilter && (
+                <div className="flex items-center gap-2 text-sm text-amber-400 bg-amber-900/20 px-3 py-1 rounded-full w-fit">
+                    <User size={14} />
+                    Filtro activo: Género {generoFilter}
+                    <button onClick={() => { setGeneroFilter(null); setSearchParams({ ...Object.fromEntries(searchParams), genero: '' }); }} className="ml-2 hover:text-white font-bold">✕</button>
+                </div>
+            )}
+          </div>
+          
+          <div className="flex gap-2 flex-wrap justify-center">
+            <Button variant="outline" size="sm" onClick={() => updateFilters(null, '')} className={!categoriaFilter ? 'bg-cyan-950 border-cyan-500 text-cyan-400' : 'bg-transparent text-slate-400 border-slate-700'}>Todos</Button>
+            {CATEGORIAS_POPULARES.map((cat) => (
+              <Button key={cat} variant="outline" size="sm" onClick={() => updateFilters(cat, '')} className={categoriaFilter === cat ? 'bg-cyan-950 border-cyan-500 text-cyan-400' : 'bg-transparent text-slate-400 border-slate-700'}>{cat}</Button>
+            ))}
           </div>
         </div>
 
-        <div>
-          {isLoading && (
-            <div className="flex justify-center items-center min-h-[30vh]">
-              <FaSpinner className="animate-spin text-cyan-400 text-4xl" />
-            </div>
-          )}
-          {error && (
-            <div className="p-8 text-center text-red-400 bg-slate-800/50 rounded-lg">
-              <p>Error al cargar los prestadores. Intenta de nuevo más tarde.</p>
-            </div>
-          )}
-          {data && data.length === 0 && (
-            <div className="p-8 text-center text-slate-400 bg-slate-800/50 rounded-lg">
-              <p>No se encontraron prestadores que coincidan con tu búsqueda.</p>
-            </div>
-          )}
-          {data && data.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {data.map((prestador) => (
-                <Link 
-                  to={`/prestadores/${prestador.id}`} 
-                  key={prestador.id}
-                  className="block transition-transform duration-200 hover:scale-[1.02] hover:shadow-cyan-500/10"
-                >
-                  <PrestadorCard prestador={prestador} />
-                </Link>
-              ))}
-            </div>
-          )}
+        {isLoading && <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-cyan-500"></div></div>}
+        {error && <div className="bg-red-900/20 border border-red-800 text-red-200 p-6 rounded-lg text-center"><p>Error al cargar.</p></div>}
+        
+        {!isLoading && !error && prestadores?.length === 0 && (
+          <div className="text-center py-20 bg-slate-900/30 rounded-xl border border-slate-800">
+            <p className="text-slate-400 text-lg">No se encontraron resultados.</p>
+            <Button variant="link" onClick={() => { updateFilters(null, ''); setGeneroFilter(null); }} className="mt-4 text-cyan-400">Ver todos</Button>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {prestadores?.map((prestador, index) => {
+            const idSeguro = prestador.id || prestador.id_usuario || `temp-${index}`;
+            return (
+              <PrestadorCard 
+                key={idSeguro.toString()}
+                id={idSeguro.toString()}
+                nombres={prestador.nombres}
+                primer_apellido={prestador.primer_apellido}
+                fotoUrl={prestador.foto_url || ''}
+                oficio={prestador.oficios?.[0] || 'General'}
+                resumen={prestador.resumen || `Experto en ${prestador.oficios?.[0] || 'servicios'}.`}
+                puntuacion={prestador.puntuacion_promedio || 0}
+              />
+            );
+          })}
         </div>
-      </div>
+      </main>
     </div>
   );
 }

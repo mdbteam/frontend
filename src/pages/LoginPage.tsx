@@ -7,7 +7,6 @@ import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
-// --- (Tu interfaz de error, traída de vuelta) ---
 interface ErrorResponse {
   message?: string;
   detail?: string | { msg: string }[];

@@ -1,217 +1,280 @@
-import { NavLink, Link, useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../../store/authStore';
-import { FaBars, FaTimes } from 'react-icons/fa';
-import { User, LogOut, Calendar, UserCheck, FileText } from 'lucide-react'; 
 import { useState } from 'react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '../ui/dropdown-menu';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../../store/authStore';
+import { Menu, X, MessageSquare, User, LogOut, Search, LayoutGrid, Briefcase, CalendarCheck, ShieldAlert } from 'lucide-react';
+import { Button } from '../ui/button';
 
-const MobileNavLink: React.FC<{ to: string, children: React.ReactNode, onClick: () => void }> = ({ to, children, onClick }) => (
-  <NavLink
-    to={to}
-    className={({ isActive }) =>
-      `block px-3 py-2 rounded-md text-base font-medium ${
-        isActive ? 'bg-amber-500 text-slate-900' : 'text-slate-300 hover:bg-slate-700 hover:text-white'
-      }`
-    }
-    onClick={onClick}
-  >
-    {children}
-  </NavLink>
-);
-
-const DesktopNavLink: React.FC<{ to: string, children: React.ReactNode }> = ({ to, children }) => (
-  <NavLink
-    to={to}
-    className={({ isActive }) =>
-      `px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-        isActive ? 'text-amber-400' : 'text-slate-300 hover:bg-slate-700 hover:text-white'
-      }`
-    }
-  >
-    {children}
-  </NavLink>
-);
-
-const UserAvatar: React.FC<{ user: { foto_url?: string | null, nombres?: string | null } | null }> = ({ user }) => {
-  const fallbackInitial = user?.nombres ? user.nombres.charAt(0).toUpperCase() : <User size={18} />;
-  
-  return (
-    <div className="h-8 w-8 rounded-full bg-slate-700 flex items-center justify-center text-slate-300 font-medium overflow-hidden">
-      {user?.foto_url ? (
-        <img src={user.foto_url} alt="Perfil" className="h-full w-full object-cover" />
-      ) : (
-        <span>{fallbackInitial}</span>
-      )}
-    </div>
-  );
-};
-
-
-export default function AppNavbar() {
-  const [isOpen, setIsOpen] = useState(false);
+export default function Navbar() {
   const { isAuthenticated, user, logout } = useAuthStore();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const location = useLocation();
   const navigate = useNavigate();
-  console.log("ROL ACTUAL:", user?.rol);
+
   const handleLogout = () => {
     logout();
-    setIsOpen(false);
-    navigate('/');
+    setIsMobileMenuOpen(false);
+    navigate('/login');
   };
 
-  const closeMenu = () => setIsOpen(false);
+  const getLinkClass = (path: string) => 
+    `flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+      location.pathname === path 
+        ? 'text-cyan-400 bg-slate-800 shadow-[0_0_10px_rgba(34,211,238,0.1)]' 
+        : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+    }`;
 
-  const esAdmin = isAuthenticated && user && user.rol.toLowerCase().trim() === 'administrador';
-  const esPrestador = isAuthenticated && user && user.rol.toLowerCase().trim() === 'prestador';
-  const esCliente = isAuthenticated && user && user.rol.toLowerCase().trim() === 'cliente';
+  const getProviderLinkClass = (path: string) => 
+    `flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold transition-all duration-200 border border-transparent ${
+      location.pathname === path 
+        ? 'text-amber-400 bg-slate-800 border-amber-400/20 shadow-[0_0_10px_rgba(251,191,36,0.15)]' 
+        : 'text-amber-500 hover:text-amber-300 hover:bg-amber-400/10'
+    }`;
 
+  // --- 🧠 LÓGICA DE DERIVACIÓN SEGÚN ROL ---
+  const getDashboardConfig = () => {
+    const rol = user?.rol?.toLowerCase() || '';
+    
+    
+    if (rol === 'admin' || rol === 'administrador') {
+        return {
+            path: '/administrador', 
+            label: 'Panel Admin',
+            icon: ShieldAlert,
+            styleClass: getProviderLinkClass 
+        };
+    }
+
+    // 2. Si es PRESTADOR/HIBRIDO -> Su Agenda (Calendario)
+    if (rol === 'prestador' || rol === 'hibrido') {
+        return {
+            path: '/calendario',
+            label: 'Mi Agenda',
+            icon: Briefcase,
+            styleClass: getProviderLinkClass
+        };
+    }
+
+    // 3. Si es CLIENTE FINAL -> Sus Citas realizadas (En el perfil)
+    return {
+        path: '/perfil?tab=citas',
+        label: 'Mis Citas',
+        icon: CalendarCheck,
+        styleClass: getLinkClass 
+    };
+  };
+
+  const dashboardConfig = getDashboardConfig();
+  const DashboardIcon = dashboardConfig.icon;
 
   return (
-    <nav className="bg-slate-800/80 backdrop-blur-md shadow-md sticky top-0 z-40 border-b border-slate-700">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between">
+    <nav className="bg-slate-950/95 backdrop-blur-md border-b border-slate-800 sticky top-0 z-50 transition-all">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between h-16">
           
-          {/* Logo */}
-          <div className="flex-shrink-0">
-            <Link to="/" className="text-2xl font-bold text-amber-400 font-poppins">
-              Cham<span className="text-white">Bee</span>
+          {/* --- LOGO --- */}
+          <div className="flex items-center">
+            <Link 
+              to="/" 
+              className="flex-shrink-0 flex items-center gap-3 group"
+              title="Ir a la página de inicio"
+            >
+              <div className="relative">
+                <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-amber-500 rounded-full blur opacity-25 group-hover:opacity-50 transition duration-200"></div>
+                <img 
+                  src="/assets/logo.jpg" 
+                  alt="Logotipo de Chambee" 
+                  className="relative h-9 w-auto rounded-full" 
+                />
+              </div>
+              <span className="text-white font-bold text-xl tracking-tight group-hover:text-cyan-400 transition-colors">Chambee</span>
             </Link>
           </div>
 
-          {/* Links de Escritorio */}
-          <div className="hidden md:block">
-            <div className="ml-10 flex items-center space-x-4">
-              <DesktopNavLink to="/">Inicio</DesktopNavLink>
-              <DesktopNavLink to="/prestadores">Buscar Prestadores</DesktopNavLink>
-              
-              {esAdmin && (
-                <DesktopNavLink to="/administrador">Admin</DesktopNavLink>
-              )}
-              
-              {isAuthenticated ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button 
-                      type="button" 
-                      aria-label="Abrir menú de usuario"
-                      className="rounded-full focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-slate-800"
-                    >
-                      <UserAvatar user={user} />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-56" align="end">
-                    <DropdownMenuLabel>
-                      <div className="font-medium text-white">{user?.nombres}</div>
-                      <div className="text-xs text-slate-400 font-normal capitalize">{user?.rol}</div>
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuGroup>
-                      <DropdownMenuItem onClick={() => navigate('/perfil')}>
-                        <User className="mr-2 h-4 w-4" />
-                        <span>Mi Perfil</span>
-                      </DropdownMenuItem>
-                      
-                      {/* Links condicionales por Rol */}
-                      {esPrestador && (
-                        <DropdownMenuItem onClick={() => navigate('/calendario')}>
-                          <Calendar className="mr-2 h-4 w-4" />
-                          <span>Mi Agenda</span>
-                        </DropdownMenuItem>
-                      )}
-                      
-                      {esCliente && (
-                        <>
-                          <DropdownMenuItem onClick={() => navigate('/perfil')}>
-                            <UserCheck className="mr-2 h-4 w-4" />
-                            <span>Mis Citas</span>
-                          </DropdownMenuItem>
-                          
-                          {/* --- 2. ¡AQUÍ ESTÁ EL ARREGLO! --- */}
-                          <DropdownMenuItem onClick={() => navigate('/postular')}>
-                            <FileText className="mr-2 h-4 w-4" />
-                            <span>Postular como Prestador</span>
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                    </DropdownMenuGroup>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleLogout} className="text-red-400 focus:bg-red-900/50 focus:text-red-300">
-                      <LogOut className="mr-2 h-4 w-4" />
-                      <span>Cerrar Sesión</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                <DesktopNavLink to="/login">Iniciar Sesión</DesktopNavLink>
-              )}
-            </div>
+          {/* --- MENÚ DESKTOP (CENTRO) --- */}
+          <div className="hidden md:flex items-center space-x-2">
+            <Link to="/" className={getLinkClass('/')} title="Inicio">
+              <LayoutGrid size={18} />
+              <span className="hidden lg:inline">Inicio</span>
+            </Link>
+            <Link to="/prestadores" className={getLinkClass('/prestadores')} title="Buscar prestadores">
+              <Search size={18} />
+              <span>Buscar Expertos</span>
+            </Link>
+            
+            {isAuthenticated && (
+              <Link to="/mensajes" className={getLinkClass('/mensajes')} title="Mis mensajes">
+                <MessageSquare size={18} />
+                <span>Mensajes</span>
+              </Link>
+            )}
           </div>
 
-          {/* ... (El resto del código, Botón Móvil y Menú Móvil, no cambia) ... */}
-          <div className="-mr-2 flex md:hidden">
+          {/* --- MENÚ DERECHA --- */}
+          <div className="hidden md:flex items-center gap-4">
+            {isAuthenticated ? (
+              <div className="flex items-center gap-3">
+                
+                <div className="h-6 w-[1px] bg-slate-800 mx-1"></div> 
+                
+                {/* 🚀 BOTÓN DINÁMICO SEGÚN ROL */}
+                <Link 
+                    to={dashboardConfig.path} 
+                    className={dashboardConfig.styleClass(dashboardConfig.path)} 
+                    title={dashboardConfig.label}
+                >
+                  <DashboardIcon size={18} />
+                  <span>{dashboardConfig.label}</span>
+                </Link>
+
+                {/* Perfil Miniatura */}
+                <Link to="/perfil" className="group flex items-center gap-2 pl-2" title="Ir a mi perfil">
+                  <div className="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700 group-hover:border-cyan-500 transition-colors overflow-hidden">
+                    {user?.foto_url ? (
+                      <img 
+                        src={user.foto_url} 
+                        alt={`Foto de perfil de ${user.nombres}`} 
+                        className="w-full h-full object-cover" 
+                      />
+                    ) : (
+                      <span className="text-cyan-400 font-bold">{user?.nombres?.[0] || <User size={16} />}</span>
+                    )}
+                  </div>
+                </Link>
+
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={handleLogout}
+                  className="text-slate-500 hover:text-red-400 hover:bg-red-900/10 rounded-full w-9 h-9"
+                  title="Cerrar Sesión"
+                  aria-label="Cerrar Sesión"
+                >
+                  <LogOut size={18} />
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <Link to="/login">
+                  <Button 
+                    variant="ghost" 
+                    className="text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+                  >
+                    Iniciar Sesión
+                  </Button>
+                </Link>
+                <Link to="/registro">
+                  <Button 
+                    className="bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white border-none font-semibold shadow-lg shadow-cyan-900/20 transition-all hover:scale-105"
+                  >
+                    Regístrate
+                  </Button>
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {/* --- BOTÓN MÓVIL --- */}
+          <div className="flex items-center md:hidden">
             <button
-              onClick={() => setIsOpen(!isOpen)}
-              type="button"
-              className="inline-flex items-center justify-center rounded-md bg-slate-700 p-2 text-slate-300 hover:bg-slate-600 hover:text-white"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="text-slate-400 hover:text-white p-2"
+              aria-label="Abrir menú de navegación"
+              title="Menú"
             >
-              <span className="sr-only">Abrir menú</span>
-              {isOpen ? <FaTimes className="block h-6 w-6" /> : <FaBars className="block h-6 w-6" />}
+              {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Menú Móvil (este ya estaba correcto) */}
-      <div className={`${isOpen ? 'block' : 'hidden'} md:hidden border-t border-slate-700`} id="mobile-menu">
-        {isAuthenticated && user && (
-          <div className="px-5 pt-4 pb-3 border-b border-slate-700">
-            <div className="flex items-center gap-3">
-              <UserAvatar user={user} />
-              <div>
-                <div className="text-base font-medium text-white">{user.nombres}</div>
-                <div className="text-sm font-medium text-slate-400 capitalize">{user.rol}</div>
+      {/* --- MENÚ MÓVIL --- */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden bg-slate-900 border-b border-slate-800 animate-in slide-in-from-top-5 duration-200">
+          <div className="px-3 pt-3 pb-4 space-y-1">
+            <Link 
+              to="/" 
+              className={getLinkClass('/') + " w-full justify-start text-base"} 
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <LayoutGrid size={20} /> Inicio
+            </Link>
+            <Link 
+              to="/prestadores" 
+              className={getLinkClass('/prestadores') + " w-full justify-start text-base"} 
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <Search size={20} /> Buscar Expertos
+            </Link>
+
+            {isAuthenticated && (
+              <>
+                <Link 
+                  to="/mensajes" 
+                  className={getLinkClass('/mensajes') + " w-full justify-start text-base"} 
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <MessageSquare size={20} /> Mensajes
+                </Link>
+
+                {/* BOTÓN MÓVIL DINÁMICO */}
+                <div className="my-2 border-t border-slate-800/50 pt-2">
+                    <Link 
+                    to={dashboardConfig.path} 
+                    className="flex items-center gap-3 px-3 py-3 rounded-lg bg-amber-500/10 text-amber-400 font-bold border border-amber-500/20 active:bg-amber-500/20"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                    <DashboardIcon size={20} />
+                    {dashboardConfig.label}
+                    </Link>
+                </div>
+
+                <div className="border-t border-slate-800 my-2 pt-2">
+                  <Link 
+                    to="/perfil" 
+                    className="flex items-center gap-3 px-3 py-3 text-slate-300 hover:bg-slate-800 rounded-md"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <div className="w-6 h-6 rounded-full bg-slate-700 flex items-center justify-center text-xs overflow-hidden">
+                        {user?.foto_url ? (
+                          <img 
+                            src={user.foto_url} 
+                            alt={`Foto de perfil de ${user.nombres}`} 
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <User size={14}/>
+                        )}
+                    </div>
+                    Mi Perfil
+                  </Link>
+                  <button 
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-3 px-3 py-3 text-red-400 hover:bg-red-900/20 rounded-md mt-1"
+                    title="Cerrar Sesión"
+                  >
+                    <LogOut size={20} /> Cerrar Sesión
+                  </button>
+                </div>
+              </>
+            )}
+
+            {!isAuthenticated && (
+              <div className="flex flex-col gap-3 px-1 pt-4 pb-2">
+                <Link to="/login" onClick={() => setIsMobileMenuOpen(false)}>
+                  <Button variant="ghost" className="w-full justify-start text-slate-300 hover:text-white hover:bg-slate-800">
+                    Iniciar Sesión
+                  </Button>
+                </Link>
+                <Link to="/registro" onClick={() => setIsMobileMenuOpen(false)}>
+                  <Button className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold">
+                    Regístrate Gratis
+                  </Button>
+                </Link>
               </div>
-            </div>
+            )}
           </div>
-        )}
-        
-        <div className="space-y-1 px-2 pb-3 pt-2 sm:px-3">
-          <MobileNavLink to="/" onClick={closeMenu}>Inicio</MobileNavLink>
-          <MobileNavLink to="/prestadores" onClick={closeMenu}>Buscar Prestadores</MobileNavLink>
-          
-          {esAdmin && (
-            <MobileNavLink to="/administrador" onClick={closeMenu}>Admin</MobileNavLink>
-          )}
-
-          {esPrestador && (
-            <MobileNavLink to="/calendario" onClick={closeMenu}>Mi Agenda</MobileNavLink>
-          )}
-          {esCliente && (
-            <MobileNavLink to="/postular" onClick={closeMenu}>Postular</MobileNavLink>
-          )}
-
-          {isAuthenticated ? (
-            <>
-              <MobileNavLink to="/perfil" onClick={closeMenu}>Mi Perfil</MobileNavLink>
-              <button
-                onClick={handleLogout}
-                className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:bg-slate-700 hover:text-white"
-              >
-                Cerrar Sesión
-              </button>
-            </>
-          ) : (
-            <MobileNavLink to="/login" onClick={closeMenu}>Iniciar Sesión</MobileNavLink>
-          )}
         </div>
-      </div>
+      )}
     </nav>
   );
 }

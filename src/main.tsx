@@ -1,23 +1,23 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import { RouterProvider, createBrowserRouter } from 'react-router-dom'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { Toaster } from "sonner"
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { RouterProvider, createBrowserRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from 'sonner';
 
-import './index.css'
-import { AppLayout } from './components/layout/AppLayout'
-import HomePage from './pages/HomePage'
-import LoginPage from './pages/LoginPage'
-import RegisterPage from './pages/RegisterPage'
-import UserProfilePage from './pages/UserProfilePage'
-import ProviderApplicationPage from './pages/ProviderApplicationPage'
-import PrestadorListPage from './pages/PrestadorListPage'
-import PrestadorDetailPage from './pages/PrestadorDetailPage'
-import ProviderCalendarPage from './pages/ProviderCalendarPage'
-import AdminDashboardPage from './pages/admin/AdminDashboardPage'
+import './index.css';
+import { AppLayout } from './components/layout/AppLayout';
+import HomePage from './pages/HomePage';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import UserProfilePage from './pages/UserProfilePage';
+import ProviderApplicationPage from './pages/ProviderApplicationPage';
+import PrestadorListPage from './pages/PrestadorListPage';
+import PrestadorDetailPage from './pages/PrestadorDetailPage';
+import ProviderCalendarPage from './pages/ProviderCalendarPage';
+import AdminDashboardPage from './pages/admin/AdminDashboardPage';
+import { ChatDashboard } from './components/chat/ChatDashboard';
 
-
-const queryClient = new QueryClient()
+const queryClient = new QueryClient();
 
 const router = createBrowserRouter([
   {
@@ -33,9 +33,11 @@ const router = createBrowserRouter([
       { path: '/prestadores/:id', element: <PrestadorDetailPage /> },
       { path: '/calendario', element: <ProviderCalendarPage /> },
       { path: '/administrador', element: <AdminDashboardPage /> },
+      { path: '/mensajes', element: <ChatDashboard /> },
+      { path: '/mensajes/:userId', element: <ChatDashboard /> },
     ]
   }
-])
+]);
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
@@ -57,4 +59,4 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       />
     </QueryClientProvider>
   </React.StrictMode>
-)
+);
