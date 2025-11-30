@@ -17,7 +17,6 @@ interface Resena {
   puntaje: number | null; 
   comentario: string | null; 
   fecha_creacion: string; 
-  // Asumimos que la API nos dará el nombre y foto del autor de la reseña
   autor_nombres?: string; 
   autor_foto_url?: string | null;
 }
@@ -34,7 +33,7 @@ interface PrestadorPublicoDetalle {
   puntuacion_promedio: number;
   trabajos_realizados: number;
   perfil: PerfilDetalle | null;
-  estaVerificado: boolean; // Prop que faltaba
+  estaVerificado: boolean; 
   resenas: Resena[];
   servicios: Servicio[]; 
   ratingDistribution: RatingDistributionItem[];
@@ -87,7 +86,6 @@ export default function PrestadorProfilePage() {
         <div className="p-4 sm:p-8">
             <div className="mx-auto max-w-4xl space-y-8">
                 
-                {/* --- CORRECCIÓN 1: Props de ProfileHeader --- */}
                 <ProfileHeader 
                   nombres={prestador.nombres}
                   primer_apellido={prestador.primer_apellido}
@@ -97,7 +95,6 @@ export default function PrestadorProfilePage() {
                   estaVerificado={prestador.estaVerificado}
                 />
 
-                {/* Asumimos que la API devuelve 'servicios'. Si no, esta sección no se mostrará. */}
                 {prestador.servicios && prestador.servicios.length > 0 && (
                   <ProfileSection title="Servicios Ofrecidos">
                       {prestador.servicios.map(servicio => (
@@ -110,7 +107,6 @@ export default function PrestadorProfilePage() {
                   </ProfileSection>
                 )}
 
-                {/* Asumimos que la API devuelve 'ratingDistribution'. */}
                 {prestador.ratingDistribution && (
                   <RatingSummary
                       averageRating={prestador.puntuacion_promedio}
@@ -121,7 +117,6 @@ export default function PrestadorProfilePage() {
                 
                 <CommentForm />
 
-                {/* --- CORRECCIÓN 2: Props de ReviewCard --- */}
                 {prestador.resenas && prestador.resenas.length > 0 && (
                   <ProfileSection title="Comentarios de otros clientes">
                       {prestador.resenas.map(reseña => (
@@ -131,7 +126,7 @@ export default function PrestadorProfilePage() {
                           autor={reseña.autor_nombres || `Cliente #${reseña.id_autor}`}
                           comentario={reseña.comentario || ''}
                           puntuacion={reseña.puntaje || 0}
-                          fotoUrl={reseña.autor_foto_url || undefined} // Pasamos la foto si existe
+                          fotoUrl={reseña.autor_foto_url || undefined}
                         />
                       ))}
                   </ProfileSection>

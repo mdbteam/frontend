@@ -16,6 +16,7 @@ import PrestadorDetailPage from './pages/PrestadorDetailPage';
 import ProviderCalendarPage from './pages/ProviderCalendarPage';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 import { ChatDashboard } from './components/chat/ChatDashboard';
+import AdministratorListPage from './pages/AdministratorListPage';
 
 const queryClient = new QueryClient();
 
@@ -35,6 +36,7 @@ const router = createBrowserRouter([
       { path: '/administrador', element: <AdminDashboardPage /> },
       { path: '/mensajes', element: <ChatDashboard /> },
       { path: '/mensajes/:userId', element: <ChatDashboard /> },
+      { path: '/admin/usuarios', element: <AdministratorListPage /> }
     ]
   }
 ]);

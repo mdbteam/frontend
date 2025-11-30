@@ -54,7 +54,7 @@ export default function UserProfilePage() {
       label: 'Mis Citas', 
       icon: FaCalendarAlt, 
       component: <MyCitasList />, 
-      show: !isAdmin // Admin no tiene citas propias en esta vista
+      show: !isAdmin 
     },
     { 
       id: 'perfil', 
@@ -94,9 +94,9 @@ export default function UserProfilePage() {
           nombres={user.nombres}
           primer_apellido={user.primer_apellido}
           fotoUrl={user.foto_url || null} 
-          oficio={user.rol} // Mostramos el rol real
+          oficio={user.rol} 
           resumen={isAdmin ? "Administrador del Sistema" : "Gestiona tu actividad y reputación en Chambee."}
-          estaVerificado={esPrestador} // Asumimos verificado si es prestador por ahora
+          estaVerificado={esPrestador} 
         />
 
         <div className="flex flex-col md:flex-row gap-8">

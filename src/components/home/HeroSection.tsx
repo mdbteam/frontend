@@ -1,9 +1,27 @@
-// --- ¡CORRECCIÓN! Importaciones añadidas donde sí se usan ---
 import { Link } from 'react-router-dom';
 import { Button } from '../ui/button';
 import { FaArrowRight } from 'react-icons/fa';
+import { useAuthStore } from '../../store/authStore';
 
 export function HeroSection() {
+  const { user, isAuthenticated } = useAuthStore();
+  const rol = user?.rol?.toLowerCase() || '';
+
+  // Condición para OCULTAR el botón:
+  // Si está logueado Y es (prestador O híbrido O admin)
+  const shouldHideProviderButton = isAuthenticated && (
+    rol === 'prestador' || 
+    rol === 'híbrido' || 
+    rol === 'hibrido' || 
+    rol === 'admin' || 
+    rol === 'administrador'
+  );
+
+  // Destino del enlace:
+  // Si está logueado (y es cliente), va a /postular.
+  // Si NO está logueado, va a /registro.
+  const providerLinkDestination = isAuthenticated ? "/postular" : "/registro";
+
   return (
     <section className="text-center max-w-3xl mx-auto">
       <h1 className="text-4xl sm:text-6xl font-bold text-white font-poppins [text-shadow:0_0_20px_rgba(234,179,8,0.5)]">
@@ -12,7 +30,9 @@ export function HeroSection() {
       <p className="mt-6 text-lg sm:text-xl text-slate-300 max-w-2xl mx-auto">
         Desde gasfitería hasta electricidad, encuentra el prestador de servicios verificado que necesitas para tu hogar o negocio.
       </p>
+      
       <div className="mt-10 flex flex-col sm:flex-row justify-center gap-4">
+        {/* Botón principal (Siempre visible) */}
         <Button 
           asChild 
           size="lg" 
@@ -22,16 +42,20 @@ export function HeroSection() {
             Encontrar un Prestador <FaArrowRight className="ml-2 h-4 w-4" />
           </Link>
         </Button>
-        <Button 
-          asChild 
-          size="lg" 
-          variant="secondary"
-          className="text-base"
-        >
-          <Link to="/postular">
-            Quiero ser Prestador
-          </Link>
-        </Button>
+
+        {/* Botón secundario (Condicional) */}
+        {!shouldHideProviderButton && (
+          <Button 
+            asChild 
+            size="lg" 
+            variant="secondary"
+            className="text-base bg-slate-800 text-white hover:bg-slate-700 border border-slate-700"
+          >
+            <Link to={providerLinkDestination}>
+              Quiero ser Prestador
+            </Link>
+          </Button>
+        )}
       </div>
     </section>
   );
