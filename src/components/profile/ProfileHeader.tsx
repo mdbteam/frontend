@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import { FaUserCircle } from 'react-icons/fa'; 
 
 interface ProfileHeaderProps {
@@ -45,15 +44,8 @@ export function ProfileHeader({ nombres, primer_apellido, oficio, fotoUrl, resum
               </div>
               <p className="text-md text-slate-400">{oficio}</p>
             </div>
-          </div>
-          <div className="w-full sm:w-auto">
-            <Link 
-              to="#"
-              className="w-full sm:w-auto inline-block text-center bg-cyan-500 text-white px-6 py-2 rounded-md font-medium hover:bg-cyan-400 transition-colors"
-            >
-              Contactar
-            </Link>
-          </div>
+          </div>        
+            
         </div>
         <p className="mt-6 text-sm text-slate-300 border-t border-slate-700 pt-4">        
           {resumen || 'El usuario aún no ha agregado un resumen.'}

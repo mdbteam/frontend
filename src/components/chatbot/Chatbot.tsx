@@ -94,7 +94,7 @@ export function Chatbot() {
       setTimeout(() => {
         setMessages([{
           id: 1,
-          text: "¡Hola! Soy Bee 🐝. Puedo filtrar por género o especialidad. Prueba: 'Busco una electricista mujer'.",
+          text: "¡Hola! Soy Bee 🐝, El asistente virtual.\n Te ayudo a encontrar el prestador ideal según tu necesidad. Cuéntame y te guío paso a paso'.",
           sender: 'bot',
           timestamp: new Date()
         }]);
@@ -147,7 +147,7 @@ export function Chatbot() {
     const isAffirmative = text.toLowerCase().match(/s[íi]|claro|bueno|yes|ok|dale|mostrar|ver/);
     
     if (isAffirmative && pendingAction) {
-        addMessage("¡Entendido! Te muestro los mejores profesionales disponibles sin filtro de género.", 'bot');
+        addMessage("¡Entendido! Te muestro los mejores profesionales disponibles", 'bot');
         
         const params = new URLSearchParams();
         if (pendingAction.data.oficio) {

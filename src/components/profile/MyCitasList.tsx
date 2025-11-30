@@ -4,11 +4,11 @@ import axios from 'axios';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Link } from 'react-router-dom'; // 👈 Importamos Link para navegación
+import { Link } from 'react-router-dom'; 
 import { 
   FaSpinner, FaStar, FaClock, FaCheckCircle, 
   FaBan, FaUser, FaCommentDots 
-} from 'react-icons/fa'; // 👈 Agregamos FaCommentDots
+} from 'react-icons/fa'; 
 
 import { useAuthStore } from '../../store/authStore';
 import { Button } from '../ui/button';
@@ -224,7 +224,6 @@ export function MyCitasList() {
                     <span>{rolOtro}: <strong className="text-slate-200">{nombreOtro || `Usuario #${idOtro}`}</strong></span>
                   </div>
                   
-                  {/* 👇 NUEVO BOTÓN CHAT */}
                   <Link 
                     to={`/mensajes/${idOtro}`} 
                     className="flex items-center gap-1 text-cyan-400 hover:text-cyan-300 transition-colors font-medium bg-cyan-950/30 px-2 py-0.5 rounded border border-cyan-900/50"
@@ -238,7 +237,6 @@ export function MyCitasList() {
               <CitaStatusBadge cita={cita} />
             </div>
 
-            {/* 👇 CORRECCIÓN: break-words para que no se salga */}
             {cita.detalles && (
               <div className="bg-slate-900/50 p-3 rounded-lg mb-4 border border-slate-800/50">
                 <p className="text-slate-300 text-sm italic break-words whitespace-pre-wrap leading-relaxed">
