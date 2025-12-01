@@ -34,23 +34,23 @@ export default function Navbar() {
   const getDashboardConfig = () => {
     const rol = user?.rol?.toLowerCase() || '';
     
-    
+    // 1. Si es ADMIN -> Panel Admin
     if (rol === 'admin' || rol === 'administrador') {
         return {
             path: '/administrador', 
             label: 'Panel Admin',
             icon: ShieldAlert,
-            styleClass: getProviderLinkClass 
+            styleClass: getProviderLinkClass // Dorado
         };
     }
 
-    // 2. Si es PRESTADOR/HIBRIDO -> Su Agenda (Calendario)
-    if (rol === 'prestador' || rol === 'hibrido') {
+    // 2. Si es PRESTADOR/HÍBRIDO -> Su Agenda (Calendario)
+    if (rol === 'prestador' || rol === 'híbrido') {
         return {
             path: '/calendario',
             label: 'Mi Agenda',
             icon: Briefcase,
-            styleClass: getProviderLinkClass
+            styleClass: getProviderLinkClass // Dorado
         };
     }
 
@@ -59,7 +59,7 @@ export default function Navbar() {
         path: '/perfil?tab=citas',
         label: 'Mis Citas',
         icon: CalendarCheck,
-        styleClass: getLinkClass 
+        styleClass: getLinkClass // Azul estándar
     };
   };
 
@@ -116,7 +116,7 @@ export default function Navbar() {
                 
                 <div className="h-6 w-[1px] bg-slate-800 mx-1"></div> 
                 
-                {/*  BOTÓN DINÁMICO SEGÚN ROL */}
+                {/* 🔥 BOTÓN DINÁMICO SEGÚN ROL */}
                 <Link 
                     to={dashboardConfig.path} 
                     className={dashboardConfig.styleClass(dashboardConfig.path)} 

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Button } from '../ui/button';
-import { FaArrowRight } from 'react-icons/fa';
+import { FaArrowRight, FaArrowAltCircleUp } from 'react-icons/fa';
 import { useAuthStore } from '../../store/authStore';
 
 export function HeroSection() {
@@ -49,10 +49,10 @@ export function HeroSection() {
             asChild 
             size="lg" 
             variant="secondary"
-            className="text-base bg-slate-800 text-white hover:bg-slate-700 border border-slate-700"
+            className="text-base bg-amber-400 text-slate-900 hover:bg-amber-400/90 border border-amber-400"
           >
             <Link to={providerLinkDestination}>
-              Quiero ser Prestador
+              Quiero ser Prestador <FaArrowAltCircleUp className="ml-2 h-4 w-4" />
             </Link>
           </Button>
         )}

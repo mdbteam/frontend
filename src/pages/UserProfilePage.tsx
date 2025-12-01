@@ -30,7 +30,6 @@ export default function UserProfilePage() {
   const [searchParams] = useSearchParams();
   const { user } = useAuthStore();
   
-  // Obtenemos el tab de la URL, por defecto intentamos que sea 'citas'
   const tabParam = searchParams.get('tab');
 
   if (!user) {
@@ -45,9 +44,8 @@ export default function UserProfilePage() {
   const rol = user.rol?.toLowerCase() || '';
   const isAdmin = rol === 'admin' || rol === 'administrador';
   const esPrestador = rol === 'prestador' || rol === 'hibrido';
-  // El cliente es cualquiera que no sea admin ni prestador (o explícitamente cliente)
   
-  // 2. Configuración de Pestañas
+ 
   const tabs = [
     { 
       id: 'citas', 
@@ -61,21 +59,21 @@ export default function UserProfilePage() {
       label: 'Mi Perfil', 
       icon: FaUser, 
       component: <MyProfileForm />, 
-      show: true // Todos pueden editar su perfil
+      show: true 
     },
     { 
       id: 'experiencia', 
       label: 'Mi Experiencia', 
       icon: FaBriefcase, 
       component: <MyExperienceTab />, 
-      show: esPrestador // Solo prestadores tienen portafolio
+      show: esPrestador 
     },
     { 
       id: 'resenas', 
       label: 'Mis Reseñas', 
       icon: FaComments, 
       component: <MyReviewsTab />, 
-      show: !isAdmin // Admin no recibe/da reseñas en esta vista
+      show: !isAdmin 
     },
   ];
 

@@ -1,13 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useForm, type SubmitHandler, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
+import { useDropzone } from 'react-dropzone'; 
 import { 
     FaSpinner, FaPencilAlt, FaTimes, FaSave, FaUserCircle, 
     FaEnvelope, FaPhone, FaMapMarkerAlt, FaBriefcase, 
-    FaCalendarAlt, FaQuoteLeft 
+    FaCalendarAlt, FaQuoteLeft, FaCamera 
 } from 'react-icons/fa';
 
 import { useAuthStore } from '../../store/authStore';
@@ -37,7 +38,6 @@ const profileUpdateSchema = z.object({
 
 type ProfileFormInputs = z.infer<typeof profileUpdateSchema>;
 
-// Extendemos la interfaz para aceptar datos anidados si el backend los manda así
 interface MyProfileData extends ProfileFormInputs {
     id: string;
     rut: string;
@@ -59,6 +59,7 @@ interface ModalState {
     type: 'success' | 'error';
 }
 
+// --- 2. API ---
 const apiProveedores = axios.create({
     baseURL: 'https://provider-service-mjuj.onrender.com'
 });
@@ -68,7 +69,6 @@ const fetchMyProfile = async (token: string | null): Promise<MyProfileData> => {
     const { data } = await apiProveedores.get<MyProfileData>('/profile/me', {
         headers: { Authorization: `Bearer ${token}` }
     });
-    console.log("📡 DATA PERFIL RECIBIDA:", data); // Revisa esto en la consola del navegador (F12)
     return data;
 };
 
@@ -85,6 +85,20 @@ const updateMyProfile = async ({
     });
 };
 
+const updateProfilePicture = async ({ file, token }: { file: File; token: string | null }) => {
+    if (!token) throw new Error("No token");
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    return apiProveedores.put('/profile/me/picture', formData, {
+        headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data'
+        }
+    });
+};
+
+// --- COMPONENTE PRINCIPAL ---
 export function MyProfileForm() {
     const { token, setUser, user } = useAuthStore();
     const queryClient = useQueryClient();
@@ -103,7 +117,7 @@ export function MyProfileForm() {
         retry: false,
     });
 
-    const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<ProfileFormInputs>({
+    const { register, handleSubmit, reset, formState: { isSubmitting, errors } } = useForm<ProfileFormInputs>({
         resolver: zodResolver(profileUpdateSchema) as Resolver<ProfileFormInputs>,
         defaultValues: {
             nombres: "",
@@ -112,24 +126,21 @@ export function MyProfileForm() {
         }
     });
 
-    // LÓGICA DE MAPEO INTELIGENTE
+    // LÓGICA DE MAPEO DE DATOS
     useEffect(() => {
         if (profileData) {
-            // Buscamos la biografía en todos los lugares posibles
             const bioValue = 
                 profileData.biografia || 
                 profileData.bio || 
                 profileData.perfil?.biografia || 
                 "";
 
-            // Buscamos el resumen en todos los lugares posibles
             const resumenValue = 
                 profileData.resumen_profesional || 
                 profileData.resumen || 
-                profileData.perfil?.resumen_profesional || // Busca dentro del objeto perfil
+                profileData.perfil?.resumen_profesional || 
                 "";
 
-            // Buscamos la experiencia
             const experienciaValue = 
                 profileData.anos_experiencia ?? 
                 profileData.perfil?.anos_experiencia ?? 
@@ -142,12 +153,9 @@ export function MyProfileForm() {
                 direccion: profileData.direccion || "",
                 genero: profileData.genero || "",
                 fecha_nacimiento: profileData.fecha_nacimiento || "",
-                
-                // Valores calculados arriba
                 biografia: bioValue,
                 resumen_profesional: resumenValue,
                 anos_experiencia: experienciaValue,
-                
                 correo: profileData.correo || "",
                 telefono: profileData.telefono || "",
             });
@@ -156,10 +164,16 @@ export function MyProfileForm() {
 
     const mutation = useMutation({
         mutationFn: updateMyProfile,
-        onSuccess: (response) => {
+        onSuccess: (response, variables) => {
             queryClient.invalidateQueries({ queryKey: ['myProfile'] });
-            // Actualizamos el usuario en el store global si es necesario
-            if (user) setUser({ ...user, ...response.data });
+            
+            if (user) {
+                setUser({ 
+                    ...user, 
+                    ...response.data,
+                    ...variables.data 
+                });
+            }
             
             setModalInfo({
                 isOpen: true,
@@ -178,11 +192,56 @@ export function MyProfileForm() {
             })
     });
 
+    const photoMutation = useMutation({
+        mutationFn: updateProfilePicture,
+        onSuccess: (response) => {
+            queryClient.invalidateQueries({ queryKey: ['myProfile'] });
+            if (user) setUser({ ...user, ...response.data });
+            setModalInfo({
+                isOpen: true,
+                title: "Foto Actualizada",
+                description: "Tu foto de perfil se ha actualizado.",
+                type: "success"
+            });
+        },
+        onError: () => {
+            setModalInfo({
+                isOpen: true,
+                title: "Error",
+                description: "No se pudo actualizar la foto.",
+                type: "error"
+            });
+        }
+    });
+    
+    // --- Lógica de Dropzone para la foto de perfil ---
+    const onDrop = useCallback((acceptedFiles: File[]) => {
+        if (acceptedFiles.length > 0) {
+            photoMutation.mutate({ file: acceptedFiles[0], token });
+        } else {
+            setModalInfo({
+                isOpen: true,
+                title: "Error de Archivo",
+                description: "Tipo de archivo no válido o archivo demasiado grande.",
+                type: "error"
+            });
+        }
+    }, [photoMutation, token]);
+
+    const { getRootProps, getInputProps, isDragActive } = useDropzone({
+        onDrop,
+        accept: {
+            'image/jpeg': ['.jpeg', '.jpg'],
+            'image/png': ['.png']
+        },
+        maxFiles: 1,
+        noKeyboard: true, 
+    });
+    // --------------------------------------------------
+
     const onSubmit: SubmitHandler<ProfileFormInputs> = (formData) => {
         mutation.mutate({ data: formData, token });
     };
-
-    const maxDate = new Date().toISOString().split("T")[0];
 
     if (isLoading)
         return (
@@ -198,8 +257,6 @@ export function MyProfileForm() {
             </div>
         );
 
-    // --- VARIABLES DE VISUALIZACIÓN (READ MODE) ---
-    // Usamos la misma lógica de búsqueda profunda que en el useEffect
     const displayBio = 
         profileData.biografia || 
         profileData.bio || 
@@ -229,26 +286,52 @@ export function MyProfileForm() {
 
             <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-lg">
 
-                {/* HEADER */}
+                {/* HEADER CON FOTO EDITABLE (usando Dropzone) */}
                 <div className="bg-slate-950/50 p-6 border-b border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4">
                     <div className="flex items-center gap-4">
-                        <div className="h-16 w-16 rounded-full bg-slate-800 border-2 border-cyan-500/50 flex items-center justify-center overflow-hidden">
-                            {profileData.foto_url
-                                ? (
+                        <div className="relative group">
+                            
+                            {/* Área de Dropzone/Click */}
+                            <div 
+                                {...getRootProps()}
+                                className={`h-20 w-20 rounded-full border-2 cursor-pointer transition-all duration-300 overflow-hidden flex items-center justify-center shadow-lg
+                                    ${isDragActive ? 'border-cyan-400 bg-slate-700/50 scale-105' : 'border-cyan-500/50 bg-slate-800 hover:border-cyan-400'}`
+                                }
+                                aria-label="Haz clic o arrastra para cambiar la foto de perfil"
+                                title="Cambiar foto de perfil"
+                            >
+                                <input {...getInputProps()} />
+
+                                {profileData.foto_url ? (
                                     <img
                                         src={profileData.foto_url}
                                         alt="Profile"
-                                        className="h-full w-full object-cover"
+                                        className="h-full w-full object-cover group-hover:opacity-50 transition-opacity"
                                     />
-                                )
-                                : <FaUserCircle className="text-4xl text-slate-600" />}
+                                ) : (
+                                    <FaUserCircle className="text-5xl text-slate-600 group-hover:text-slate-500 transition-colors" />
+                                )}
+                                
+                                {/* Overlay de cámara/carga MEJORADO */}
+                                <div className={`absolute inset-0 flex items-center justify-center transition-all duration-300
+                                    ${photoMutation.isPending || isDragActive ? 'opacity-100 bg-black/60' : 'opacity-0 group-hover:opacity-100 bg-black/40'}`}
+                                >
+                                    {photoMutation.isPending ? (
+                                        <FaSpinner className="animate-spin text-cyan-400 text-xl" />
+                                    ) : (
+                                        <FaCamera className="text-white text-xl drop-shadow-md" />
+                                    )}
+                                </div>
+                            </div>
                         </div>
+
                         <div>
                             <h2 className="text-2xl font-bold text-white">
                                 {profileData.nombres} {profileData.primer_apellido}
                             </h2>
-                            <p className="text-cyan-400 text-sm font-medium uppercase tracking-wider">
+                            <p className="text-cyan-400 text-sm font-medium uppercase tracking-wider flex items-center gap-2">
                                 {profileData.rol || 'Usuario'}
+                                {profileData.rol?.toLowerCase() === 'prestador' && <span className="bg-cyan-500/10 text-cyan-400 text-[10px] px-2 py-0.5 rounded-full border border-cyan-500/20">Verificado</span>}
                             </p>
                         </div>
                     </div>
@@ -256,7 +339,7 @@ export function MyProfileForm() {
                     {!isEditing && (
                         <Button
                             onClick={() => setIsEditing(true)}
-                            className="bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-slate-700"
+                            className="bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-slate-700 hover:border-cyan-500/50 transition-all shadow-sm"
                         >
                             <FaPencilAlt className="mr-2" /> Editar Perfil
                         </Button>
@@ -269,7 +352,6 @@ export function MyProfileForm() {
                     {!isEditing ? (
                         // --- MODO LECTURA ---
                         <div className="space-y-8 animate-in fade-in duration-300">
-
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-12">
                                 <InfoItem icon={<FaEnvelope />} label="Correo" value={profileData.correo} />
                                 <InfoItem icon={<FaPhone />} label="Teléfono" value={profileData.telefono} />
@@ -284,8 +366,6 @@ export function MyProfileForm() {
                             <div className="border-t border-slate-800 my-6" />
 
                             <div className="space-y-8">
-
-                                {/* RESUMEN PROFESIONAL */}
                                 <div>
                                     <h3 className="text-slate-500 text-xs uppercase font-bold mb-3 tracking-wider">
                                         Resumen Profesional
@@ -302,7 +382,6 @@ export function MyProfileForm() {
                                     </div>
                                 </div>
 
-                                {/* BIOGRAFÍA */}
                                 <div>
                                     <h3 className="text-slate-500 text-xs uppercase font-bold mb-3 tracking-wider">
                                         Biografía
@@ -315,108 +394,106 @@ export function MyProfileForm() {
                                         )}
                                     </div>
                                 </div>
-
                             </div>
                         </div>
                     ) : (
-
-                        // --- MODO EDICIÓN ---
-                        <form
-                            onSubmit={handleSubmit(onSubmit)}
-                            className="space-y-6"
-                        >
-                            {/* ... (El resto del formulario se mantiene igual, ya está correcto) ... */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <div>
-                                    <Label>Nombres</Label>
-                                    <Input disabled={true} {...register("nombres")} className="bg-slate-950 border-slate-700" />
-                                    {errors.nombres && <span className="text-red-400 text-xs">{errors.nombres.message}</span>}
-                                </div>
-
-                                <div>
-                                    <Label>Primer Apellido</Label>
-                                    <Input disabled={true} {...register("primer_apellido")} className="bg-slate-950 border-slate-700" />
-                                    {errors.primer_apellido && <span className="text-red-400 text-xs">{errors.primer_apellido.message}</span>}
-                                </div>
-
-                                <div>
-                                    <Label>Segundo Apellido (Opcional)</Label>
-                                    <Input disabled={true} {...register("segundo_apellido")} className="bg-slate-950 border-slate-700" />
-                                    {errors.segundo_apellido && <span className="text-red-400 text-xs">{errors.segundo_apellido.message}</span>}
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-4">
+                        // --- MODO EDICIÓN (REORDENADO Y BLOQUEADO) ---
+                        <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+                            
+                            {/* SECCIÓN 1: IDENTIDAD (Datos Personales) */}
+                            <div className="space-y-4">
+                                <h3 className="text-cyan-400 text-sm font-bold uppercase tracking-wider border-b border-slate-800 pb-2 mb-4">
+                                    Información Personal
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                     <div>
-                                        <Label>Correo </Label>
-                                        <Input disabled={true} {...register("correo")} className="bg-slate-800 border-slate-700 text-slate-400" />
+                                        <Label htmlFor="nombres">Nombres</Label>
+                                        <Input id="nombres" {...register("nombres")} disabled={true} className="bg-slate-800 border-slate-700 text-slate-400 cursor-not-allowed mt-1.5" />
+                                        {errors.nombres && <span className="text-red-400 text-xs">{errors.nombres.message}</span>}
                                     </div>
-
                                     <div>
-                                        <Label>Teléfono</Label>
-                                        <Input {...register("telefono")} maxLength={9} placeholder="912345678" className="bg-slate-950 border-slate-700" />
-                                        {errors.telefono && <span className="text-red-400 text-xs">{errors.telefono.message}</span>}
+                                        <Label htmlFor="primer_apellido">Primer Apellido</Label>
+                                        <Input id="primer_apellido" {...register("primer_apellido")} disabled={true} className="bg-slate-800 border-slate-700 text-slate-400 cursor-not-allowed mt-1.5" />
+                                        {errors.primer_apellido && <span className="text-red-400 text-xs">{errors.primer_apellido.message}</span>}
                                     </div>
-
                                     <div>
-                                        <Label>Dirección</Label>
-                                        <Input {...register("direccion")} className="bg-slate-950 border-slate-700" />
+                                        <Label htmlFor="segundo_apellido">Segundo Apellido (Opcional)</Label>
+                                        <Input id="segundo_apellido" {...register("segundo_apellido")} className="bg-slate-950 border-slate-700 mt-1.5" placeholder="Ej. Gómez" />
+                                        {errors.segundo_apellido && <span className="text-red-400 text-xs">{errors.segundo_apellido.message}</span>}
                                     </div>
-                                </div>
-
-                                <div className="space-y-4">
                                     <div>
-                                        <Label>Fecha Nacimiento</Label>
-                                        <Input type="date" max={maxDate} {...register("fecha_nacimiento")} className="bg-slate-950 border-slate-700" />
+                                        <Label htmlFor="fecha_nacimiento">Fecha Nacimiento (No editable)</Label>
+                                        <Input id="fecha_nacimiento" type="date" {...register("fecha_nacimiento")} disabled={true} className="bg-slate-800 border-slate-700 text-slate-400 cursor-not-allowed mt-1.5" />
                                         {errors.fecha_nacimiento && <span className="text-red-400 text-xs">{errors.fecha_nacimiento.message}</span>}
                                     </div>
-
                                     <div>
-                                        <Label>Género</Label>
+                                        <Label htmlFor="genero">Género</Label>
                                         <select
+                                            id="genero"
                                             {...register("genero")}
-                                            className="bg-slate-950 border border-slate-700 rounded-md px-3 py-2 text-white w-full focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                                            className="bg-slate-950 border border-slate-700 rounded-md px-3 py-2 text-white w-full focus:outline-none focus:ring-2 focus:ring-cyan-500 mt-1.5 h-10"
                                         >
-                                            <option value="">Selecciona tu género</option>
+                                            <option value="">Selecciona</option>
                                             <option value="Masculino">Masculino</option>
                                             <option value="Femenino">Femenino</option>
                                             <option value="Prefiero no decirlo">Prefiero no decirlo</option>
                                         </select>
+                                        {errors.genero && <span className="text-red-400 text-xs">{errors.genero.message}</span>}
                                     </div>
+                                </div>
+                            </div>
 
+                            {/* SECCIÓN 2: CONTACTO */}
+                            <div className="space-y-4">
+                                <h3 className="text-cyan-400 text-sm font-bold uppercase tracking-wider border-b border-slate-800 pb-2 mb-4">
+                                    Datos de Contacto
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                     <div>
-                                        <Label>Años Experiencia</Label>
-                                        <Input type="number" {...register("anos_experiencia")} className="bg-slate-950 border-slate-700" />
+                                        <Label htmlFor="correo">Correo Electrónico</Label>
+                                        <Input id="correo" {...register("correo")} disabled={true} className="bg-slate-800 border-slate-700 text-slate-400 cursor-not-allowed mt-1.5" />
+                                        {errors.correo && <span className="text-red-400 text-xs">{errors.correo.message}</span>}
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="telefono">Teléfono</Label>
+                                        <Input id="telefono" {...register("telefono")} maxLength={9} placeholder="912345678" className="bg-slate-950 border-slate-700 mt-1.5" />
+                                        {errors.telefono && <span className="text-red-400 text-xs">{errors.telefono.message}</span>}
+                                    </div>
+                                    <div className="md:col-span-2 lg:col-span-1">
+                                        <Label htmlFor="direccion">Dirección</Label>
+                                        <Input id="direccion" {...register("direccion")} className="bg-slate-950 border-slate-700 mt-1.5" placeholder="Ej. Av. Providencia 1234" />
+                                        {errors.direccion && <span className="text-red-400 text-xs">{errors.direccion.message}</span>}
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="border-t border-slate-800 my-6" />
-
-                            <div className="space-y-6">
-                                <div>
-                                    <Label>Resumen Profesional</Label>
-                                    <Textarea
-                                        rows={3}
-                                        {...register("resumen_profesional")}
-                                        className="bg-slate-950 border-slate-700"
-                                        placeholder="Ej: Experto en carpintería, disponible fines de semana."
-                                    />
-                                </div>
-
-                                <div>
-                                    <Label>Biografía</Label>
-                                    <Textarea
-                                        rows={6}
-                                        {...register("biografia")}
-                                        className="bg-slate-950 border-slate-700"
-                                        placeholder="Cuenta tu historia, experiencia laboral completa, estudios, etc."
-                                    />
+                            {/* SECCIÓN 3: PERFIL PROFESIONAL */}
+                            <div className="space-y-4">
+                                <h3 className="text-amber-400 text-sm font-bold uppercase tracking-wider border-b border-slate-800 pb-2 mb-4">
+                                    Perfil Profesional
+                                </h3>
+                                <div className="space-y-6">
+                                    <div className="w-full md:w-1/3">
+                                        <Label htmlFor="anos_experiencia">Años de Experiencia</Label>
+                                        <Input id="anos_experiencia" type="number" {...register("anos_experiencia")} className="bg-slate-950 border-slate-700 mt-1.5" placeholder="Ej. 5" />
+                                        {errors.anos_experiencia && <span className="text-red-400 text-xs">{errors.anos_experiencia.message}</span>}
+                                    </div>
+                                    
+                                    <div>
+                                        <Label htmlFor="resumen_profesional">Resumen Profesional (Breve)</Label>
+                                        <Textarea id="resumen_profesional" rows={3} {...register("resumen_profesional")} className="bg-slate-950 border-slate-700 mt-1.5" placeholder="Ej: Especialista en instalaciones eléctricas domiciliarias con certificación SEC." />
+                                        {errors.resumen_profesional && <span className="text-red-400 text-xs">{errors.resumen_profesional.message}</span>}
+                                    </div>
+                                    
+                                    <div>
+                                        <Label htmlFor="biografia">Biografía Completa</Label>
+                                        <Textarea id="biografia" rows={6} {...register("biografia")} className="bg-slate-950 border-slate-700 mt-1.5" placeholder="Cuenta tu historia, experiencia laboral completa, estudios, certificaciones, etc." />
+                                        {errors.biografia && <span className="text-red-400 text-xs">{errors.biografia.message}</span>}
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+                            <div className="flex justify-end gap-3 pt-6 border-t border-slate-800 sticky bottom-0 bg-slate-900 pb-2 z-10">
                                 <Button
                                     type="button"
                                     variant="ghost"
@@ -425,15 +502,12 @@ export function MyProfileForm() {
                                 >
                                     <FaTimes className="mr-2" /> Cancelar
                                 </Button>
-
                                 <Button
                                     type="submit"
                                     disabled={isSubmitting}
-                                    className="bg-cyan-600 hover:bg-cyan-500 text-white"
+                                    className="bg-cyan-600 hover:bg-cyan-500 text-white shadow-lg shadow-cyan-900/20"
                                 >
-                                    {isSubmitting ? (
-                                        <FaSpinner className="animate-spin mr-2" />
-                                    ) : (<FaSave className="mr-2" />)}
+                                    {isSubmitting ? <FaSpinner className="animate-spin mr-2" /> : <FaSave className="mr-2" />}
                                     Guardar Cambios
                                 </Button>
                             </div>
@@ -445,20 +519,12 @@ export function MyProfileForm() {
     );
 }
 
-function InfoItem({
-    icon,
-    label,
-    value
-}: {
-    icon: React.ReactNode;
-    label: string;
-    value?: string | number | null;
-}) {
+function InfoItem({ icon, label, value }: { icon: React.ReactNode; label: string; value?: string | number | null; }) {
     return (
-        <div className="flex items-start gap-3">
-            <div className="mt-1 text-slate-500">{icon}</div>
+        <div className="flex items-start gap-3 group">
+            <div className="mt-1 text-slate-500 group-hover:text-cyan-400 transition-colors">{icon}</div>
             <div>
-                <p className="text-xs font-bold text-slate-500 uppercase">{label}</p>
+                <p className="text-xs font-bold text-slate-500 uppercase group-hover:text-slate-400 transition-colors">{label}</p>
                 <p className="text-slate-200 font-medium">
                     {value || <span className="text-slate-600 italic">No especificado</span>}
                 </p>

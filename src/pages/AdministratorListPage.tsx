@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
-import { Search, Trash2, Ban, User, MoreVertical, Loader2, AlertTriangle } from 'lucide-react';
+import { Search, Trash2, Ban, User, MoreVertical, Loader2, AlertTriangle, ChevronLeft } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 
-// Componentes UI
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { InfoDialog } from '../components/ui/InfoDialog';
@@ -24,10 +23,9 @@ import {
   DialogFooter 
 } from "../components/ui/dialog";
 
-
 interface AdminUser {
   id: string; 
-  id_usuario: number;
+  id_usuario: number; 
   nombres: string;
   primer_apellido: string;
   foto_url: string | null;
@@ -39,10 +37,9 @@ interface AdminUser {
   fecha_nacimiento: string;
   email?: string; 
   rol?: string;
-  estado?: 'activo' | 'suspendido'; 
+  estado?: 'activo' | 'suspendido' | 'eliminado'; 
 }
 
-// API
 const api = axios.create({
   baseURL: 'https://provider-service-mjuj.onrender.com', 
 });
@@ -50,7 +47,6 @@ const api = axios.create({
 const fetchAllUsers = async (token: string | null, search: string) => {
   if (!token) throw new Error("No token");
   
-
   const { data } = await api.get<AdminUser[]>('/prestadores', { 
     headers: { Authorization: `Bearer ${token}` },
     params: { q: search || undefined }
@@ -58,22 +54,13 @@ const fetchAllUsers = async (token: string | null, search: string) => {
   return data;
 };
 
-//  Simulación de eliminación
-const deleteUserMock = async ({ id, token }: { id: string, token: string | null }) => {
-  // Simular retardo de red
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  console.log(`[MOCK] Eliminando usuario ID: ${id} con token: ${token ? 'OK' : 'MISSING'}`);
-  
- 
-  /* comentado por falta de endpoint
+const deleteUser = async ({ id, token }: { id: number, token: string | null }) => {
   if (!token) throw new Error("No token");
-  await api.delete(`/prestadores/${id}`, {
+  
+  await api.delete(`/users/${id}`, {
+    params: { token }, // Token va en query params según documentación
     headers: { Authorization: `Bearer ${token}` }
   });
-  */
-  
-  return true;
 };
 
 export default function AdministratorListPage() {
@@ -81,8 +68,7 @@ export default function AdministratorListPage() {
   const queryClient = useQueryClient();
   
   const [searchTerm, setSearchTerm] = useState('');
-  
-  const [userToDelete, setUserToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [userToDelete, setUserToDelete] = useState<{ id: number; name: string } | null>(null);
 
   const [modalInfo, setModalInfo] = useState<{ isOpen: boolean; title: string; description: string; type: 'success' | 'error' | 'info' }>({
     isOpen: false, title: '', description: '', type: 'info'
@@ -94,17 +80,15 @@ export default function AdministratorListPage() {
     enabled: !!token,
   });
 
-
   const deleteMutation = useMutation({
-    mutationFn: deleteUserMock, //diego qlo aacuerdate de cambiar acá igual 
+    mutationFn: deleteUser,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminPrestadores'] });
-      
       setUserToDelete(null);
       setModalInfo({ 
         isOpen: true, 
         title: 'Usuario Eliminado', 
-        description: 'El usuario ha sido eliminado correctamente (Simulación).', 
+        description: 'El usuario ha sido dado de baja correctamente.', 
         type: 'success' 
       });
     },
@@ -120,22 +104,23 @@ export default function AdministratorListPage() {
     }
   });
 
-  
-  const promptDelete = (id: string, name: string) => {
+  const promptDelete = (id: number, name: string) => {
     setUserToDelete({ id, name });
   };
 
-  
   const confirmDelete = () => {
     if (userToDelete) {
         deleteMutation.mutate({ id: userToDelete.id, token });
     }
   };
 
+  const handleGoBack = () => {
+    window.history.back();
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 p-4 sm:p-8 text-slate-200 font-sans">
       
-      {/* 1. Modal Informativo (Éxito/Error) */}
       <InfoDialog 
         isOpen={modalInfo.isOpen} 
         onClose={() => setModalInfo({ ...modalInfo, isOpen: false })} 
@@ -144,18 +129,17 @@ export default function AdministratorListPage() {
         type={modalInfo.type} 
       />
 
-      {/* 2. Modal de Confirmación de Eliminación (Estilo Oscuro) */}
       <Dialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
         <DialogContent className="bg-slate-900 border-slate-800 text-white sm:max-w-md">
             <DialogHeader>
                 <DialogTitle className="flex items-center gap-2 text-red-400">
-                    <AlertTriangle className="h-5 w-5" /> Confirmar Eliminación
+                    <AlertTriangle className="h-5 w-5" /> Confirmar Baja
                 </DialogTitle>
                 <DialogDescription className="text-slate-400 pt-2">
-                    ¿Estás seguro que deseas eliminar definitivamente al usuario <span className="font-bold text-white">{userToDelete?.name}</span>?
+                    ¿Estás seguro que deseas dar de baja al usuario <span className="font-bold text-white">{userToDelete?.name}</span>?
                     <br /><br />
                     <span className="bg-red-950/50 text-red-300 px-2 py-1 rounded text-xs border border-red-900">
-                        Esta acción no se puede deshacer.
+                        Esta acción liberará su correo y desactivará su cuenta.
                     </span>
                 </DialogDescription>
             </DialogHeader>
@@ -173,9 +157,9 @@ export default function AdministratorListPage() {
                     disabled={deleteMutation.isPending}
                 >
                     {deleteMutation.isPending ? (
-                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Eliminando...</>
+                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Procesando...</>
                     ) : (
-                        <>Eliminar Usuario</>
+                        <>Confirmar Baja</>
                     )}
                 </Button>
             </DialogFooter>
@@ -184,11 +168,22 @@ export default function AdministratorListPage() {
 
       <div className="max-w-7xl mx-auto">
         
-        {/* Header de la Página */}
         <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-white font-poppins">Gestión de Prestadores</h1>
-            <p className="text-slate-400 mt-1">Administra y elimina perfiles de la plataforma.</p>
+          <div className="flex items-center w-full md:w-auto">
+             <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={handleGoBack} 
+                className="text-slate-400 hover:text-white hover:bg-slate-800 rounded-full h-10 w-10 -ml-2 mr-2"
+                title="Volver"
+             >
+                <ChevronLeft />
+             </Button>
+             
+             <div>
+                <h1 className="text-3xl font-bold text-white font-poppins">Gestión de Prestadores</h1>
+                <p className="text-slate-400 mt-1">Administra y elimina perfiles de la plataforma.</p>
+             </div>
           </div>
           
           <div className="relative w-full md:w-96">
@@ -202,21 +197,18 @@ export default function AdministratorListPage() {
           </div>
         </div>
 
-        {/* Estado de Carga */}
         {isLoading && (
             <div className="flex justify-center items-center h-64">
                 <Loader2 className="animate-spin text-cyan-400 text-4xl" />
             </div>
         )}
         
-        {/* Estado de Error */}
         {error && (
             <div className="bg-red-900/20 border border-red-800 text-red-300 p-6 rounded-lg text-center">
                 Error al cargar la lista.
             </div>
         )}
 
-        {/* Tabla de Usuarios */}
         {!isLoading && !error && (
           <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
             <div className="overflow-x-auto">
@@ -234,6 +226,8 @@ export default function AdministratorListPage() {
                   {users?.map((user) => {
                     if (!user) return null;
 
+                    const idParaEliminar = user.id_usuario; 
+
                     return (
                     <tr key={user.id} className="hover:bg-slate-800/50 transition-colors group">
                       <td className="px-6 py-4">
@@ -247,7 +241,7 @@ export default function AdministratorListPage() {
                           </div>
                           <div>
                             <div className="font-bold text-white">{user.nombres} {user.primer_apellido}</div>
-                            <div className="text-slate-500 text-xs">ID: {user.id}</div>
+                            <div className="text-slate-500 text-xs">ID: {idParaEliminar}</div>
                           </div>
                         </div>
                       </td>
@@ -280,17 +274,15 @@ export default function AdministratorListPage() {
                           <DropdownMenuContent align="end" className="bg-slate-900 border-slate-800 text-slate-200">
                             <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                             
-                            {/* Opción Suspender (Deshabilitada visualmente si quieres, o funcional si existe endpoint) */}
                             <DropdownMenuItem disabled className="text-slate-500 cursor-not-allowed">
                                 <Ban size={14} className="mr-2" /> Suspender (Próx.)
                             </DropdownMenuItem>
                             
-                            {/* Opción Eliminar (Abre el Modal) */}
                             <DropdownMenuItem 
-                                onClick={() => promptDelete(user.id, `${user.nombres} ${user.primer_apellido}`)} 
+                                onClick={() => promptDelete(idParaEliminar, `${user.nombres} ${user.primer_apellido}`)} 
                                 className="text-red-400 hover:text-red-300 hover:bg-red-900/20 cursor-pointer focus:bg-red-900/20 focus:text-red-300"
                             >
-                                <Trash2 size={14} className="mr-2" /> Eliminar
+                                <Trash2 size={14} className="mr-2" /> Dar de Baja
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
