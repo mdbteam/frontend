@@ -20,7 +20,6 @@ import {
 import { InfoDialog } from "../components/ui/InfoDialog";
 import { Button } from "../components/ui/button";
 
-// --- INTERFACES ---
 interface CitaDetail { 
     id_cita: number; 
     fecha_hora_cita: string; 
@@ -32,7 +31,6 @@ interface CitaDetail {
 interface DisponibilidadPrivada { id_disponibilidad: number; hora_inicio: string; hora_fin: string; es_bloqueo: boolean; }
 interface DisponibilidadCreate { hora_inicio: string; hora_fin: string; es_bloqueo: boolean; }
 
-// --- API ---
 const apiCalendario = axios.create({ baseURL: 'https://calendario-service-u5f6.onrender.com' });
 
 const fetchMyCitas = async (token: string | null) => {
@@ -50,33 +48,28 @@ const deleteDisponibilidad = async ({ id, token }: { id: number; token: string |
   return apiCalendario.delete(`/disponibilidad/${id}`, { headers: { Authorization: `Bearer ${token}` } });
 };
 
-// --- RENDERIZADO DE EVENTOS (ADAPTADO A FONDO BLANCO) ---
 function renderEventContent(eventInfo: EventContentArg) {
   const { type, estado, cliente, detalles } = eventInfo.event.extendedProps;
   const title = eventInfo.event.title;
   
-  // 1. Renderizado de CITAS (Estilo Tarjeta Profesional)
   if (type === 'cita') {
     return (
       <div 
-        className="w-full h-full flex flex-col justify-start p-2 overflow-hidden border-l-4 border-amber-500 bg-amber-50 hover:bg-amber-100 text-slate-800 transition-colors rounded-r shadow-sm group cursor-pointer"
-        title={`Cita: ${title} con ${cliente || 'Cliente'}`} 
+        className="w-full h-full flex flex-col justify-start p-1.5 overflow-hidden border-l-[4px] border-amber-400 bg-amber-50 hover:bg-amber-100 text-slate-800 transition-colors rounded-r-md shadow-sm"
+        title={`Cita con: ${cliente || 'Cliente'} - ${detalles || 'Sin detalles'}`} 
       >
-        <div className="flex items-center gap-1.5 text-[10px] font-bold text-amber-700 mb-1">
-            <FaClock className="w-3 h-3" />
+        <div className="flex items-center gap-1 text-[10px] font-bold text-amber-700 mb-0.5">
+            <FaClock className="w-2.5 h-2.5" />
             {eventInfo.timeText}
         </div>
-        
-        <div className="font-bold text-xs text-slate-900 truncate group-hover:whitespace-normal group-hover:break-words leading-tight">
+        <div className="font-bold text-xs text-slate-900 truncate">
             {cliente || 'Cliente Reservado'}
         </div>
-        
-        <div className="text-[10px] text-slate-600 truncate mt-0.5 group-hover:whitespace-normal">
-            {detalles || title}
+        <div className="text-[9px] text-slate-600 truncate mt-0.5">
+            {title}
         </div>
-        
-        <div className="mt-auto pt-1 flex items-center gap-1.5">
-            <span className={`w-2 h-2 rounded-full ${estado === 'confirmada' ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+        <div className="mt-auto pt-1 flex items-center gap-1">
+            <span className={`w-1.5 h-1.5 rounded-full ${estado === 'confirmada' ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
             <span className="text-[9px] font-bold uppercase text-slate-500 tracking-wider">
                 {estado}
             </span>
@@ -85,27 +78,21 @@ function renderEventContent(eventInfo: EventContentArg) {
     );
   }
 
-  // 2. Renderizado de BLOQUEOS Y DISPONIBILIDAD (Estilo Minimalista)
   const isBloqueo = title === "Bloqueado";
   return (
     <div 
-        className={`w-full h-full flex flex-col justify-center items-center text-center p-1 border-0 transition-colors cursor-pointer
-        ${isBloqueo 
-            ? 'bg-slate-100 text-slate-500 hover:bg-slate-200' // Estilo Bloqueo sobre blanco
-            : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' // Estilo Disponible sobre blanco
-        }`}
-        title={isBloqueo ? "Horario Bloqueado" : "Horario Disponible"}
+        className={`w-full h-full flex flex-col justify-center items-center text-center p-1 border-0 ${isBloqueo ? 'bg-slate-100 text-slate-500' : 'bg-emerald-50 text-emerald-600'}`}
+        title={isBloqueo ? "Has bloqueado este horario" : "Horario disponible para clientes"}
     >
-        {isBloqueo ? <FaBan size={14} className="mb-1 opacity-70" /> : <FaCheckCircle size={14} className="mb-1 opacity-70" />}
-        <span className="text-[10px] font-bold uppercase tracking-wide opacity-90">
-            {isBloqueo ? 'Bloqueado' : 'Disp.'}
+        {isBloqueo ? <FaBan size={12} className="mb-1 opacity-50" /> : <FaCheckCircle size={12} className="mb-1 opacity-50" />}
+        <span className="text-[10px] font-bold uppercase tracking-wide opacity-80">
+            {isBloqueo ? 'Bloqueado' : 'Disponible'}
         </span>
     </div>
   );
 }
 
-// --- ESTILOS CSS PERSONALIZADOS PARA FULLCALENDAR (OVERRIDE) ---
-// Esto asegura que el calendario se vea bien en blanco sin romper el CSS global
+// Estilos CSS inyectados para forzar fondo blanco en FullCalendar
 const calendarStyles = `
   .fc {
     --fc-page-bg-color: #ffffff;
@@ -128,18 +115,18 @@ const calendarStyles = `
     border-color: #e2e8f0;
   }
   .fc-col-header-cell-cushion {
-    color: #334155; /* Slate 700 */
+    color: #334155;
     font-weight: 700;
     text-transform: uppercase;
     font-size: 0.85rem;
     padding: 8px 0;
   }
   .fc-timegrid-slot-label-cushion {
-    color: #64748b; /* Slate 500 */
+    color: #64748b;
     font-size: 0.85rem;
   }
   .fc-toolbar-title {
-    color: #0f172a; /* Slate 900 */
+    color: #0f172a;
     font-weight: 800 !important;
     font-size: 1.5rem !important;
   }
@@ -153,7 +140,6 @@ const calendarStyles = `
   }
 `;
 
-// --- COMPONENTE PRINCIPAL ---
 export default function ProviderCalendarPage() {
   const token = useAuthStore((state) => state.token);
   const queryClient = useQueryClient();
@@ -161,6 +147,7 @@ export default function ProviderCalendarPage() {
   const [selectedRange, setSelectedRange] = useState<DateSelectArg | null>(null);
   const [selectedCita, setSelectedCita] = useState<CitaDetail | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<{ id: string; type: string } | null>(null);
+  
   const [modalInfo, setModalInfo] = useState({ isOpen: false, title: "", description: "", type: "success" as "success" | "error" });
 
   const { data: citas, isLoading: loadingCitas } = useQuery({ queryKey: ["myCitas"], queryFn: () => fetchMyCitas(token) });
@@ -170,9 +157,9 @@ export default function ProviderCalendarPage() {
     mutationFn: createDisponibilidad,
     onSuccess: () => { 
         queryClient.invalidateQueries({ queryKey: ["myDisponibilidad"] }); 
-        setModalInfo({ isOpen: true, title: "Agenda Actualizada", description: "El horario se ha guardado correctamente.", type: "success" }); 
+        setModalInfo({ isOpen: true, title: "Horario Guardado", description: "Tu agenda se actualizó correctamente.", type: "success" }); 
     },
-    onError: () => setModalInfo({ isOpen: true, title: "Error", description: "No se pudo guardar el horario. Intenta nuevamente.", type: "error" }),
+    onError: () => setModalInfo({ isOpen: true, title: "Error", description: "No se pudo guardar el horario.", type: "error" }),
   });
 
   const deleteMutation = useMutation({
@@ -181,7 +168,7 @@ export default function ProviderCalendarPage() {
         queryClient.invalidateQueries({ queryKey: ["myDisponibilidad"] }); 
         setModalInfo({ isOpen: true, title: "Horario Eliminado", description: "El bloque ha sido removido.", type: "success" }); 
     },
-    onError: () => setModalInfo({ isOpen: true, title: "Error", description: "No se pudo eliminar el bloque.", type: "error" }),
+    onError: () => setModalInfo({ isOpen: true, title: "Error", description: "No se pudo eliminar.", type: "error" }),
   });
 
   const dataForCalendar = useMemo<EventInput[]>(() => {
@@ -191,10 +178,9 @@ export default function ProviderCalendarPage() {
             title: c.detalles || "Servicio Agendado",
             start: c.fecha_hora_cita,
             end: new Date(new Date(c.fecha_hora_cita).getTime() + 60*60*1000).toISOString(), 
-            // Los colores se manejan en renderEventContent, aquí ponemos transparente
             backgroundColor: "transparent", 
             borderColor: "transparent",
-            className: "z-20", 
+            className: "z-10", 
             extendedProps: { 
                 type: 'cita', 
                 data: c, 
@@ -210,10 +196,9 @@ export default function ProviderCalendarPage() {
       title: b.es_bloqueo ? "Bloqueado" : "Disponible",
       start: b.hora_inicio,
       end: b.hora_fin,
-      // Usamos transparent porque renderEventContent controla el fondo completo
       backgroundColor: "transparent", 
       borderColor: "transparent",
-      className: "z-10",
+      className: "z-0",
       extendedProps: { type: 'gestion', apiId: b.id_disponibilidad }
     }));
 
@@ -233,26 +218,33 @@ export default function ProviderCalendarPage() {
       const now = new Date();
       const selectedStart = new Date(info.start);
       
+      // Validación de fecha pasada
       if (selectedStart < now) {
           info.view.calendar.unselect();
           setModalInfo({ 
               isOpen: true, 
               title: "Acción Inválida", 
-              description: "No puedes gestionar horarios en el pasado.", 
+              description: "No puedes gestionar horarios en fechas u horas pasadas.", 
               type: "error" 
           });
           return;
       }
 
-      info.view.calendar.unselect(); 
+      
       setSelectedRange(info); 
   };
 
   const handleConfirmRange = (esBloqueo: boolean) => {
     if (!selectedRange) return;
     manageMutation.mutate({ payload: { hora_inicio: selectedRange.startStr, hora_fin: selectedRange.endStr, es_bloqueo: esBloqueo }, token });
+    selectedRange.view.calendar.unselect();
     setSelectedRange(null);
   };
+
+  const handleCancelRange = () => {
+    if (selectedRange) selectedRange.view.calendar.unselect();
+    setSelectedRange(null);
+  }
 
   const handleDeleteSlot = () => {
     if (!selectedSlot) return;
@@ -269,29 +261,20 @@ export default function ProviderCalendarPage() {
       
       <div className="mx-auto max-w-7xl space-y-6">
         
-        {/* HEADER DE LA PÁGINA */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-slate-800 pb-6">
             <div>
                 <h1 className="text-3xl font-bold text-white font-poppins">Mi Agenda</h1>
                 <p className="mt-2 text-slate-400 max-w-xl text-sm">
-                    Gestiona tu disponibilidad. Arrastra en los espacios blancos para definir horarios.
+                    Haz clic y arrastra en los espacios blancos para definir horarios.
                 </p>
             </div>
-            {/* LEYENDA ADAPTADA A LOS NUEVOS COLORES */}
             <div className="flex flex-wrap gap-3 text-xs font-medium">
-                <div className="flex items-center gap-2 bg-slate-900 px-3 py-1.5 rounded-full border border-slate-800">
-                    <div className="w-3 h-3 rounded-full bg-emerald-400"></div> Disponible
-                </div>
-                <div className="flex items-center gap-2 bg-slate-900 px-3 py-1.5 rounded-full border border-slate-800">
-                    <div className="w-3 h-3 rounded-full bg-slate-400"></div> Bloqueado
-                </div>
-                <div className="flex items-center gap-2 bg-slate-900 px-3 py-1.5 rounded-full border border-slate-800">
-                    <div className="w-3 h-3 rounded-full bg-amber-400"></div> Cita
-                </div>
+                <div className="flex items-center gap-2 bg-slate-900 px-3 py-1.5 rounded-full border border-slate-800"><div className="w-3 h-3 rounded-full bg-emerald-400"></div> Disponible</div>
+                <div className="flex items-center gap-2 bg-slate-900 px-3 py-1.5 rounded-full border border-slate-800"><div className="w-3 h-3 rounded-full bg-slate-400"></div> Bloqueado</div>
+                <div className="flex items-center gap-2 bg-slate-900 px-3 py-1.5 rounded-full border border-slate-800"><div className="w-3 h-3 rounded-full bg-amber-400"></div> Cita</div>
             </div>
         </div>
         
-        {/* CONTENEDOR DEL CALENDARIO - AHORA BLANCO */}
         <div className="bg-white rounded-xl border border-slate-700 shadow-2xl overflow-hidden p-1">
           <div className="rounded-lg overflow-hidden">
             <FullCalendar
@@ -301,8 +284,8 @@ export default function ProviderCalendarPage() {
                 initialView="timeGridWeek" 
                 events={dataForCalendar}
                 editable={false} 
-                selectable 
-                selectMirror 
+                selectable={true} 
+                selectMirror={true} 
                 dayMaxEvents 
                 weekends
                 select={handleDateSelect} 
@@ -313,28 +296,28 @@ export default function ProviderCalendarPage() {
                 firstDay={1} 
                 allDaySlot={false}
                 eventContent={renderEventContent} 
-                // Añadimos clases para mejorar el espaciado
-                contentHeight="auto"
-                aspectRatio={1.8}
+                slotDuration="00:30:00"
+                snapDuration="00:15:00" 
             />
           </div>
         </div>
       </div>
 
-      {/* DIALOGOS (Mantienen el tema oscuro de la app para consistencia) */}
-      <Dialog open={!!selectedRange} onOpenChange={(o) => !o && setSelectedRange(null)}>
-        <DialogContent className="bg-slate-900 border-slate-700 text-white w-[95%] sm:max-w-md">
+      {/* MODAL DEFINIR HORARIO (Inteligente: Muestra rango exacto) */}
+      <Dialog open={!!selectedRange} onOpenChange={(o) => !o && handleCancelRange()}>
+        <DialogContent className="bg-slate-900 border-slate-700 text-white sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-xl"><FaClock className="text-cyan-400"/> Definir Horario</DialogTitle>
             <DialogDescription className="text-slate-400 mt-2">
                 Rango seleccionado:<br/>
-                <span className="text-white font-mono text-base font-semibold block mt-1 p-2 bg-slate-800 rounded text-center">
+                <span className="text-white font-mono text-base font-semibold block mt-1 p-2 bg-slate-800 rounded text-center border border-slate-700">
+                    {/* Formato inteligente de hora */}
                     {selectedRange?.start.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} - {selectedRange?.end.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
                 </span>
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="flex flex-col sm:flex-row gap-3 mt-6 w-full">
-            <Button variant="ghost" onClick={() => setSelectedRange(null)} className="w-full sm:w-auto text-slate-400 hover:text-white order-3 sm:order-1">Cancelar</Button>
+          <DialogFooter className="flex-col sm:flex-row gap-2 mt-4 w-full">
+            <Button variant="ghost" onClick={handleCancelRange} className="w-full sm:w-auto text-slate-400 hover:text-white order-3 sm:order-1">Cancelar</Button>
             <Button 
                 onClick={() => handleConfirmRange(true)} 
                 className="w-full sm:w-auto bg-slate-700 hover:bg-slate-600 text-white border border-slate-600 order-2"
@@ -351,17 +334,20 @@ export default function ProviderCalendarPage() {
         </DialogContent>
       </Dialog>
 
+      {/* MODAL ELIMINAR SLOT */}
       <AlertDialog open={!!selectedSlot} onOpenChange={(o) => !o && setSelectedSlot(null)}>
-        <AlertDialogContent className="bg-slate-900 border-slate-700 text-white w-[95%] sm:max-w-md">
+        <AlertDialogContent className="bg-slate-900 border-slate-700 text-white sm:max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-red-400 flex items-center gap-2">
                 <FaTrash /> Eliminar Espacio
             </AlertDialogTitle>
             <AlertDialogDescription className="text-slate-400">
               ¿Deseas eliminar este bloque de <strong>{selectedSlot?.type === 'Bloqueado' ? 'bloqueo' : 'disponibilidad'}</strong>?
+              <br/><br/>
+              El horario volverá a ser "No disponible".
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="flex flex-col sm:flex-row gap-2 mt-4">
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2 mt-4">
             <AlertDialogCancel onClick={() => setSelectedSlot(null)} className="bg-transparent text-slate-300 border-slate-700 hover:bg-slate-800 w-full sm:w-auto mt-0">Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteSlot} className="bg-red-600 hover:bg-red-700 text-white border-0 w-full sm:w-auto">
                 Eliminar
@@ -370,8 +356,9 @@ export default function ProviderCalendarPage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* MODAL DETALLE CITA */}
       <Dialog open={!!selectedCita} onOpenChange={(o) => !o && setSelectedCita(null)}>
-        <DialogContent className="bg-slate-900 border-slate-700 text-white w-[95%] sm:max-w-lg">
+        <DialogContent className="bg-slate-900 border-slate-700 text-white sm:max-w-lg">
             <DialogHeader>
                 <DialogTitle className="text-2xl font-bold text-cyan-400 flex items-center gap-2">
                     <FaCalendarDay /> Detalles de la Reserva
@@ -410,7 +397,7 @@ export default function ProviderCalendarPage() {
 
                     <div>
                         <p className="text-slate-400 text-sm mb-2 flex items-center gap-2 font-bold"><FaInfoCircle /> Detalle de la solicitud:</p>
-                        <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-700 italic text-slate-300 text-sm leading-relaxed break-words">
+                        <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-700 italic text-slate-300 text-sm leading-relaxed break-words whitespace-pre-wrap">
                             "{selectedCita.detalles || 'Sin detalles adicionales'}"
                         </div>
                     </div>
