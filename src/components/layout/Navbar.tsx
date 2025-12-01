@@ -30,7 +30,7 @@ export default function Navbar() {
         : 'text-amber-500 hover:text-amber-300 hover:bg-amber-400/10'
     }`;
 
-  // --- 🧠 LÓGICA DE DERIVACIÓN SEGÚN ROL ---
+  // --- LÓGICA DE DERIVACIÓN SEGÚN ROL ---
   const getDashboardConfig = () => {
     const rol = user?.rol?.toLowerCase() || '';
     
@@ -116,7 +116,7 @@ export default function Navbar() {
                 
                 <div className="h-6 w-[1px] bg-slate-800 mx-1"></div> 
                 
-                {/* 🚀 BOTÓN DINÁMICO SEGÚN ROL */}
+                {/*  BOTÓN DINÁMICO SEGÚN ROL */}
                 <Link 
                     to={dashboardConfig.path} 
                     className={dashboardConfig.styleClass(dashboardConfig.path)} 
@@ -263,7 +263,7 @@ export default function Navbar() {
                 <Link to="/login" onClick={() => setIsMobileMenuOpen(false)}>
                   <Button variant="ghost" className="w-full justify-start text-slate-300 hover:text-white hover:bg-slate-800">
                     Iniciar Sesión
-                  </Button>
+                  </Button>s
                 </Link>
                 <Link to="/registro" onClick={() => setIsMobileMenuOpen(false)}>
                   <Button className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold">
